@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+
+<meta charset="ISO-8859-1" /> 
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
+<HTA:APPLICATION 
+    ID='ListTxtCmd'
+    Scroll='Yes'
+    SingleInstance='No'
+    SysMenu='Yes'
+    ShowInTaskBar='No'
+    MaximizeButton='Yes'
+    MinimizeButton='Yes'
+    Border='None'
+    INNERBORDER ='No'
+    Caption='No'
+
+	showintaskbar="yes"
+
+    WindowState='Normal'
+    APPLICATIONNAME='Tileack'
+    Icon='%SystemRoot%\explorer.exe'
+>
+
+<title>Tileack</title>
+
+<style>
+    html, body, div, p, a, li, ul, span, input {
+        font-family: "Segoe UI";
+        font-weight: 100;
+        color: #000;
+    }
+    html, body {
+        min-width: 100%;
+        min-height: 100%;
+        margin: 0;
+        padding: 0;
+        max-height: 100%;
+        height: 100%;
+    }
+
+    html {
+        max-width: 100%;
+    }
+
+    body {
+        overflow: scroll;
+
+        overflow-x: scroll;
+        overflow-y: hidden;
+        white-space: nowrap;
+
+        vertical-align: top;
+    }
+
+    .explorer {
+        vertical-align: top;
+        position: relative;
+        display: inline-block;
+
+        min-width: 100px;
+        min-height: 100%;
+        height: 100%;
+
+        padding: 44px 18px 6px 12px;
+
+        -moz-box-sizing: border-box;
+        box-sizing: border-box;
+        margin-right: 2px;
+
+        box-shadow: inset 1px 4px 9px -6px; 
+        border-right: 1px solid #ddd;
+    }
+        .explorer-bar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            right: 0;
+            height: 32px;
+
+            width: 100%;
+
+            margin: 0;
+            border: 0 none;
+
+            font-size: 21px;
+
+            padding: 6px 12px;
+
+            border-bottom: 1px solid #ddd;
+        }
+        .explorer-content {
+            width: 100%;
+            height: 100%;
+
+            min-width: 100%;
+            min-height: 100%;
+
+            max-width: 100%;
+            max-height: 100%;
+        }
+            .explorer-scroll {
+                min-width: 100%;
+                width: 100%;
+                min-height: 100%;
+                height: 100%;
+
+                overflow: hidden;
+                overflow-x: hidden;
+                overflow-y: auto;
+
+                white-space: nowrap;
+            }
+                .explorer-info {
+                    width: 100%;
+                    padding-right: 32px;
+
+                    -moz-box-sizing: border-box;
+                    box-sizing: border-box;
+
+                    margin-top: 9px;
+                    margin-bottom: 24px;
+
+                    font-size: 21px;
+                }
+                    .explorer-upfolder {
+                        position: absolute;
+                        right: 6px;
+                        padding: 0 6px;
+                    }
+
+                .explorer-file,
+                .explorer-folder {
+                    display: block;
+
+                    min-width: 100%;
+                    width: 100%;
+                    max-width: 100%;
+
+                    padding: 3px 6px;
+                    font-size: 18px;
+
+                    -moz-box-sizing: border-box;
+                    box-sizing: border-box;
+                }
+                .explorer-file,
+                .explorer-upfolder,
+                .explorer-folder,
+                .explorer-file:active,
+                .explorer-upfolder:active,
+                .explorer-folder:active,
+                .explorer-file:hover,
+                .explorer-upfolder:hover,
+                .explorer-folder:hover {
+                    text-decoration: none;
+                }
+
+                .explorer-file:hover,
+                .explorer-upfolder:hover,
+                .explorer-folder:hover {
+                    background: #ddd;
+                }
+
+                .explorer-folder.first {
+                    margin-top: 32px;
+                }
+</style>
+
+<body></body>
+
+<script>
+    var FILE_SYSTEM = new ActiveXObject("Scripting.FileSystemObject");
+    var SHELL = new ActiveXObject("Shell.Application");
+
+    function newExplorer(defaultUrl) {
+        var div = document.createElement('div');
+        div.className = "explorer";
+
+        var top = document.createElement('input');
+        top.className = "explorer-bar";
+
+        var scroll = document.createElement('div');
+        scroll.className = "explorer-scroll";
+
+        var content = document.createElement('div');
+        content.className = "explorer-content";
+
+        div.appendChild( top );
+        div.appendChild( content );
+
+        content.appendChild( scroll );
+
+        // top bar event
+        top.addEventListener('keyup', function(ev) {
+            if ( ev.keyCode !== 27 ) {
+                var folder = top.value;
+
+                moveExplorer( scroll, top, folder );
+            }
+        } );
+
+        if ( defaultUrl ) {
+            moveExplorer( scroll, top, defaultUrl );
+        }
+
+        document.body.appendChild( div );
+    }
+
+    function newAnchor( name, className, action ) {
+        var anchor = document.createElement('a');
+
+        anchor.className = className;
+        anchor.textContent = name;
+        anchor.setAttribute('href', '#');
+
+        anchor.addEventListener('click', action);
+
+        return anchor;
+    }
+
+    function moveExplorer( content, top, folder ) {
+        folder = (folder+"").replace( /\//g, "\\" );
+        if ( folder.charAt(folder.length-1) !== "\\" ) {
+            folder += "\\";
+        }
+
+        if ( FILE_SYSTEM.FolderExists(folder) ) {
+            var folders = [];
+
+            content.innerHTML = '';
+            var folderObjs = FILE_SYSTEM.GetFolder(folder);
+            var en;
+
+            var parts = (folder+"").split("\\");
+            if ( parts.length > 2 ) {
+                var info = document.createElement('div');
+                info.className = 'explorer-info';
+
+                if ( parts[parts.length-1] !== '' ) {
+                    info.textContent = parts[parts.length-1];
+                } else {
+                    info.textContent = parts[parts.length-2];
+                }
+
+                parts.splice( parts.length-2, 2 );
+                var subFolder = parts.join( "\\" ) + "\\";
+
+                info.appendChild( newAnchor('..', 'explorer-upfolder', function() {
+                    moveExplorer( content, top, subFolder );
+                } ));
+
+                content.appendChild( info );
+            }
+
+            en = new Enumerator(folderObjs.Files);
+            for (;!en.atEnd(); en.moveNext()) {
+                (function(path) {
+                    path += "";
+
+                    var parts = path.split("\\");
+                    var name = parts[ parts.length-1 ] || path;
+
+                    content.appendChild( newAnchor(name, 'explorer-file', function() {
+                        alert( path );
+                        SHELL.ShellExecute( "explorer", path.replace(/ /g, "\\ "), "", "open", 1 );
+                    } ));
+                })(en.item());
+            }
+
+            en = new Enumerator(folderObjs.SubFolders);
+            var isFirst = ' first';
+            for (;!en.atEnd(); en.moveNext()) {
+                (function(path) {
+                    path += "";
+
+                    var parts = path.split("\\");
+                    var name = parts[ parts.length-1 ] || path;
+
+                    content.appendChild( newAnchor(name, 'explorer-folder' + isFirst, function() {
+                        moveExplorer( content, top, path );
+                    } ));
+                })(en.item());
+
+                isFirst = '';
+            }
+
+            top.value = folder;
+        }
+    }
+</script>
+
+<script>
+    // start her up!
+    window.onload = function() {
+        numExplorer = 5;
+
+        for ( var i = 0; i < numExplorer; i++ ) {
+            newExplorer("c:\\users\\joseph\\projects");
+        }
+
+        document.addEventListener('keyup', function(ev) {
+            if ( ev.keyCode === 27 ) {
+                window.close();
+            }
+        } );
+    };
+</script>
