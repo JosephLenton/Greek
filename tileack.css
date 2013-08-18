@@ -12,30 +12,42 @@ input {
 
 html, body {
     min-width: 100%;
+    max-width: 100%;
+    width: 100%;
+
     min-height: 100%;
-    margin: 0;
-    padding: 0;
     max-height: 100%;
     height: 100%;
 
+    margin: 0;
+    padding: 0;
+    height: 100%;
+
     background: #333;
+
+    position: relative;
 }
 
-html {
-    max-width: 100%;
+.explorer-group {
+    position: absolute;
+
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
 }
 
-body {
-    overflow: scroll;
+.explorer-group {
+    overflow: auto;
 
-    overflow-x: scroll;
+    overflow-x: auto;
     overflow-y: hidden;
     white-space: nowrap;
 
     vertical-align: top;
 }
 
-.explorer {
+.explorer-container {
     vertical-align: top;
     position: relative;
     display: inline-block;

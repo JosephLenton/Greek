@@ -82,8 +82,18 @@
         return r;
     }
 
+    function newExplorerGroup( num ) {
+        var div = el('div', 'explorer-group');
+
+        for ( var i = 0; i < num; i++ ) {
+            div.appendChild( newExplorer("c:\\users\\joseph\\projects") );
+        }
+
+        return div;
+    }
+
     function newExplorer(defaultUrl) {
-        var div = el('div', 'explorer');
+        var div = el('div', 'explorer-container');
         var scroll = el('div', 'explorer-scroll');
         var content = el('div', 'explorer-content');
         var top = el('input', 'explorer-bar', {
@@ -105,7 +115,7 @@
             moveExplorer( scroll, top, defaultUrl );
         }
 
-        document.body.appendChild( div );
+        return div;
     }
 
     function newAnchor( name, className, action ) {
@@ -270,9 +280,8 @@
     window.onload = function() {
         numExplorer = 6;
 
-        for ( var i = 0; i < numExplorer; i++ ) {
-            newExplorer("c:\\users\\joseph\\projects");
-        }
+        var explorer = newExplorerGroup( 6 );
+        document.body.appendChild( explorer );
 
         document.addEventListener('keyup', function(ev) {
             if ( ev.keyCode === 27 ) {
