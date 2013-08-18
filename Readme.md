@@ -10,6 +10,31 @@ on a whim.
 This works on Windows only, as it uses the Windows scripting objects for file
 and application access.
 
+## KeyBoard Commands
+
+The keyboard controls for Tileack are a tad complicated, but they are built for
+fast usage. Once you know them, you can navigate and open files quickly.
+
+### Fast File/Folder opening
+
+The keys along the home row, a through l all representing different explorer 
+panes.
+
+ * a - select first pane
+ * s - select second pane
+ * d - select third pane
+ * f - select fourth pane
+ * g - select fifth pane
+ * h - select sixth pane
+ * j - select seventh pane
+ * k - select eight pane
+ * l - select ninth pane
+
+You can then select what to open in that pane by typing in the name, and the 
+moment something is found which matches, it is opened. 
+
+Press up to move to the folder above.
+
 ## Customization
 
 Users scripts can be loaded to customize tileack, after it has started up, by
