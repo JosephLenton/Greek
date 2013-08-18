@@ -12,7 +12,7 @@ var tileack = (function() {
     var CTRL = 17,
         ESCAPE = 27;
 
-    var TOP_ROW_LETTERS = newLettersArray( 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']' );
+    var HOME_ROW_LETTERS = newLettersArray( 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\' '#' );
 
     function newLettersArray() {
         var letters = [];
@@ -454,13 +454,13 @@ var tileack = (function() {
                 var explorers = currentExplorer.querySelectorAll('.explorer-container');
                 var i = 0;
 
-                for ( var k in TOP_ROW_LETTERS ) {
+                for ( var k in HOME_ROW_LETTERS ) {
                     if ( i >= explorers.length ) {
                         break;
                     } else {
                         var explorer = explorers[i];
                         
-                        var textFloat = newTextFloat( TOP_ROW_LETTERS[k], false );
+                        var textFloat = newTextFloat( HOME_ROW_LETTERS[k], false );
                         textFloat.className += ' text-letter';
                         textFloat.setAttribute( 'size', 1 );
 
@@ -470,7 +470,7 @@ var tileack = (function() {
                     i++;
                 }
             } else if ( isCtrlDown ) {
-                var index = TOP_ROW_LETTERS.charIndex( ev.key );
+                var index = HOME_ROW_LETTERS.charIndex( ev.key );
 
                 if ( index !== undefined ) {
                     var explorer = currentExplorer.querySelectorAll( '.explorer-container' )[index];
