@@ -5,6 +5,35 @@ var tileack = (function() {
     var WSHELL = new ActiveXObject("WScript.Shell");
     var SHELL = new ActiveXObject("Shell.Application");
 
+    /*
+     * Key Codes
+     */
+
+    var CTRL = 17,
+        ESCAPE = 27;
+
+    var TOP_ROW_LETTERS = newLettersArray( 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', '[', ']' );
+
+    function newLettersArray() {
+        var letters = [];
+        var charIndexes = {};
+
+        for ( var i = 0; i < arguments.length; i++ ) {
+            var arg = arguments[i];
+
+            var code = arg.charCodeAt(0);
+
+            letters[i] = arg;
+            charIndexes[arg] = i;
+        }
+
+        letters.charIndex = function(chr) {
+            return charIndexes[chr];
+        }
+
+        return letters;
+    }
+
     var colours = {
             'php'   : '#e02366',
             'rb'    : '#e02366',
@@ -103,6 +132,22 @@ var tileack = (function() {
         return div;
     }
 
+    function getContentParent(content) {
+        if ( content.className.indexOf('explorer-scroll') !== -1 ) {
+            return content.__parent;
+        } else {
+            return content.querySelector( '.explorer-scroll' ).__parent;
+        }
+    }
+
+    function getContentFilesAndFolders(content) {
+        if ( content.className.indexOf('explorer-scroll') !== -1 ) {
+            return content.__files;
+        } else {
+            return content.querySelector( '.explorer-scroll' ).__files;
+        }
+    }
+
     function newAnchor( name, className, action ) {
         return el( 'a', className, { text: name, click: action } );
     }
@@ -173,15 +218,21 @@ var tileack = (function() {
         return node;
     }
 
-    function newInfoBar( folder, content ) {
-        var parts = folder.split("\\");
+    function newTextFloat( text, readonly ) {
+        var data = {
+                type: 'text',
+                value: text||''
+        }
+        if ( readonly ) {
+            data.readonly = readonly;
+        }
 
+        return el( 'input', 'explorer-text-float', data );
+    }
+
+    function newInfoBar( folder, content, subFolder ) {
         var info = el('div', 'explorer-info');
-
         info.textContent = getParts( folder, "\\", -3, 2 );
-
-        parts.splice( parts.length-2, 2 );
-        var subFolder = parts.join( "\\" ) + "\\";
 
         var controls = el('div', 'explorer-info-controls');
 
@@ -204,19 +255,29 @@ var tileack = (function() {
     }
 
     function moveExplorer( content, top, folder ) {
+        if ( content.className.indexOf('explorer-scroll') === -1 ) {
+            top = content.querySelector( '.explorer-bar' );
+            content = content.querySelector( '.explorer-scroll' );
+        }
+
         folder = (folder+"").replace( /\//g, "\\" );
         if ( folder.charAt(folder.length-1) !== "\\" ) {
             folder += "\\";
         }
 
         if ( FILE_SYSTEM.FolderExists(folder) ) {
+            var files = [];
             var folders = [];
 
             content.innerHTML = '';
             var folderObjs = FILE_SYSTEM.GetFolder(folder);
             var en;
 
-            content.appendChild( newInfoBar(folder, content) );
+            var parts = folder.split("\\");
+            parts.splice( parts.length-2, 2 );
+            var subFolder = parts.join( "\\" ) + "\\";
+
+            content.appendChild( newInfoBar(folder, content, subFolder) );
 
             en = new Enumerator(folderObjs.Files);
             for (;!en.atEnd(); en.moveNext()) {
@@ -239,6 +300,13 @@ var tileack = (function() {
                     }
                     
                     content.appendChild( fileLink );
+
+                    files.push({
+                            name: name,
+                            path: path,
+                            isFile: true,
+                            isFolder: false
+                    });
                 })(en.item());
             }
 
@@ -254,12 +322,186 @@ var tileack = (function() {
                     content.appendChild( newAnchor(name, 'explorer-folder' + isFirst, function() {
                         moveExplorer( content, top, path );
                     } ));
+
+                    files.push({
+                            name: name,
+                            path: path,
+                            isFile: false,
+                            isFolder: true
+                    });
                 })(en.item());
 
                 isFirst = '';
             }
 
             top.value = folder;
+
+            content.__files = files;
+            content.__parent = subFolder;
+        }
+    }
+
+    function newEnvironment( dest ) {
+        var currentExplorer = null;
+
+        var removeCommandLetters = function() {
+            var downs = currentExplorer.querySelectorAll('.explorer-text-float.text-letter');
+
+            for ( var i = 0; i < downs.length; i++ ) {
+                var down = downs[i];
+                down.parentNode.removeChild( down );
+            }
+
+            isCtrlDown = false;
+        }
+
+        var showFileSelect = function( content ) {
+            var files = getContentFilesAndFolders( content );
+            var subFolder = getContentParent( content );
+
+            var input = newTextFloat();
+            input.className += ' text-file';
+            input.addEventListener('keydown', function(ev) {
+                if ( ev.key === 'Up' ) {
+                    if ( subFolder ) {
+                        moveExplorer( content, null, subFolder );
+                    }
+
+                    hideFileSelect();
+                } else if ( ev.key === 'Enter' ) {
+                    var text = input.value.toLowerCase();
+
+                    for ( var i = 0; i < files.length; i++ ) {
+                        var file = files[i];
+                        var index = file.name.toLowerCase().indexOf(text);
+
+                        if ( index === 0 && file.name.length === text.length ) {
+                            if ( file.isFile ) {
+                                runFile( 'explorer', file.path );
+                            } else {
+                                moveExplorer( content, null, file.path );
+                            }
+
+                            hideFileSelect();
+                        }
+                    }
+                }
+            } );
+            input.addEventListener('input', function(ev) {
+                var text = input.value.toLowerCase();
+
+                if ( text.length > 0 ) {
+                    // used for full matches from the start of a file
+                    var found = undefined,
+                    // used for partial matches, from the middle of a file
+                        maybe = undefined;
+
+                    for ( var i = 0; i < files.length; i++ ) {
+                        var index = files[i].name.toLowerCase().indexOf(text);
+
+                        if ( index === 0 ) {
+                            if ( found ) {
+                                return;
+                            } else {
+                                found = files[i];
+                            }
+                        } else if ( index !== -1 ) {
+                            if ( maybe === undefined ) {
+                                maybe = files[i];
+                            } else {
+                                maybe = null;
+                            }
+                        }
+                    }
+
+                    if ( ! found && maybe ) {
+                        found = maybe;
+                    }
+
+                    if ( found ) {
+                        if ( found.isFile ) {
+                            runFile( 'explorer', found.path );
+                        } else {
+                            moveExplorer( content, null, found.path );
+                        }
+
+                        hideFileSelect();
+                    }
+                }
+            });
+            setTimeout(function() {
+                input.focus();
+            }, 1);
+
+            content.appendChild( input );
+        }
+
+        var hideFileSelect = function() {
+            var inputs = document.querySelectorAll( '.explorer-text-float.text-file' );
+
+            for ( var i = 0; i < inputs.length; i++ ) {
+                inputs[i].parentNode.removeChild( inputs[i] );
+            }
+        }
+
+        var isCtrlDown = false;
+        dest.addEventListener( 'keydown', function(ev) {
+            var keyCode = ev.keyCode;
+
+            if ( keyCode === CTRL && currentExplorer !== null ) {
+                isCtrlDown = true;
+
+                var explorers = currentExplorer.querySelectorAll('.explorer-container');
+                var i = 0;
+
+                for ( var k in TOP_ROW_LETTERS ) {
+                    if ( i >= explorers.length ) {
+                        break;
+                    } else {
+                        var explorer = explorers[i];
+                        
+                        var textFloat = newTextFloat( TOP_ROW_LETTERS[k], false );
+                        textFloat.className += ' text-letter';
+                        textFloat.setAttribute( 'size', 1 );
+
+                        explorer.appendChild( textFloat );
+                    }
+
+                    i++;
+                }
+            } else if ( isCtrlDown ) {
+                var index = TOP_ROW_LETTERS.charIndex( ev.key );
+
+                if ( index !== undefined ) {
+                    var explorer = currentExplorer.querySelectorAll( '.explorer-container' )[index];
+
+                    if ( explorer ) {
+                        removeCommandLetters();
+
+                        showFileSelect( explorer );
+                    }
+                }
+            }
+        } );
+
+        dest.addEventListener( 'keyup', function(ev) {
+            if ( ev.keyCode === CTRL && currentExplorer !== null ) {
+                removeCommandLetters();
+            }
+
+            if ( ev.keyCode === ESCAPE ) {
+                hideFileSelect();
+            }
+        } );
+
+        return function( explorerGroup ) {
+            if ( currentExplorer !== null ) {
+                currentExplorer.parentNode.removeChild( currentExplorer );
+            }
+
+            currentExplorer = explorerGroup;
+
+            dest.appendChild( currentExplorer );
         }
     }
 
@@ -280,8 +522,8 @@ var tileack = (function() {
             start: function() {
                 // start her up!
                 window.onload = function() {
-                    var explorer = newExplorerGroup( 6 );
-                    document.body.appendChild( explorer );
+                    var setExplorer = newEnvironment( document.body );
+                    setExplorer( newExplorerGroup(6) );
                 };
             },
 
