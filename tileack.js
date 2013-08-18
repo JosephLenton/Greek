@@ -108,7 +108,11 @@ var tileack = (function() {
     }
 
     function runFile( app, path ) {
-        run( app, path.replace(/ /g, "\\ ") );
+        if ( tryOpenFileCallbacks(app, path) === false ) {
+            return;
+        } else {
+            run( app, path.replace(/ /g, "\\ ") );
+        }
     }
 
     function run( app, args ) {

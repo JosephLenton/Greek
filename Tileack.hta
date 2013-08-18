@@ -1,8 +1,5 @@
 <!DOCTYPE html>
 
-<meta charset="ISO-8859-1" /> 
-<meta http-equiv="X-UA-Compatible" content="IE=edge" />
-
 <HTA:APPLICATION 
     ID='ListTxtCmd'
     Scroll='Yes'
@@ -22,13 +19,18 @@
     Icon='%SystemRoot%\explorer.exe'
 >
 
+<meta charset="ISO-8859-1" /> 
+<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+
 <title>Tileack</title>
 
 <link rel="stylesheet" type="text/css" href="./tileack.css">
 
 <body></body>
 
-<script src="./tileack.js"></script>
+<script text="text/javascript" src="./tileack.js"></script>
+
+<script type="text/vbscript" src="./hooks.vbs"></script>
 
 <script>
     tileack.loadUserJSFile();
@@ -36,3 +38,4 @@
     // start her up!
     tileack.start();
 </script>
+
