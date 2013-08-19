@@ -48,6 +48,13 @@ This is loaded, and allows you to hook into Tileack, for customization.
 
 These can be called from your user script.
 
+### setDefaultFolder( path )
+
+For new explorer panes, this is the folder they will open by default. The path
+must exist.
+
+If no default folder is given, then it will use your home directory by default.
+
 ### onOpenFile( app:sting, path:sting )
 
 Is called when Tileack goes to open a file. If you return false, then the 
