@@ -4,6 +4,10 @@ var tileack = (function() {
     var FILE_SYSTEM = new ActiveXObject("Scripting.FileSystemObject");
     var WSHELL = new ActiveXObject("WScript.Shell");
     var SHELL = new ActiveXObject("Shell.Application");
+    var USER_HOME = WSHELL.ExpandEnvironmentStrings('%USERPROFILE%');
+
+    var saveFile = USER_HOME + "\\" + 'tileack.save.json';
+    var defaultLocation = USER_HOME;
 
     /*
      * Key Codes
@@ -12,7 +16,7 @@ var tileack = (function() {
     var CTRL = 17,
         ESCAPE = 27;
 
-    var HOME_ROW_LETTERS = newLettersArray( 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\' '#' );
+    var HOME_ROW_LETTERS = newLettersArray( 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\\', '#' );
 
     function newLettersArray() {
         var letters = [];
@@ -96,11 +100,15 @@ var tileack = (function() {
         return r;
     }
 
-    function newExplorerGroup( num ) {
+    /**
+     * @params paths:string[] An array of paths to use for the starting explorer panes.
+     * @return HTMLElement An element containing a group of explorer panes.
+     */
+    function newExplorerGroup( paths ) {
         var div = el('div', 'explorer-group');
 
-        for ( var i = 0; i < num; i++ ) {
-            div.appendChild( newExplorer("c:\\users\\joseph\\projects") );
+        for ( var i = 0; i < paths.length; i++ ) {
+            div.appendChild( newExplorer(paths[i]) );
         }
 
         return div;
@@ -338,11 +346,15 @@ var tileack = (function() {
 
             content.__files = files;
             content.__parent = subFolder;
+            content.__folder = folder;
+
+            save();
         }
     }
 
-    function newEnvironment( dest ) {
+    function newEnvironment( controlsDest, dest ) {
         var currentExplorer = null;
+        var isCtrlDown = false;
 
         var removeCommandLetters = function() {
             var downs = currentExplorer.querySelectorAll('.explorer-text-float.text-letter');
@@ -444,8 +456,7 @@ var tileack = (function() {
             }
         }
 
-        var isCtrlDown = false;
-        dest.addEventListener( 'keydown', function(ev) {
+        controlsDest.addEventListener( 'keydown', function(ev) {
             var keyCode = ev.keyCode;
 
             if ( keyCode === CTRL && currentExplorer !== null ) {
@@ -484,7 +495,7 @@ var tileack = (function() {
             }
         } );
 
-        dest.addEventListener( 'keyup', function(ev) {
+        controlsDest.addEventListener( 'keyup', function(ev) {
             if ( ev.keyCode === CTRL && currentExplorer !== null ) {
                 removeCommandLetters();
             }
@@ -494,10 +505,13 @@ var tileack = (function() {
             }
         } );
 
-        return function( explorerGroup ) {
+        return function( initialPaths ) {
             if ( currentExplorer !== null ) {
                 currentExplorer.parentNode.removeChild( currentExplorer );
             }
+
+            // todo support more than 1 initial path
+            var explorerGroup = newExplorerGroup( initialPaths[0] );
 
             currentExplorer = explorerGroup;
 
@@ -505,10 +519,69 @@ var tileack = (function() {
         }
     }
 
+    function save() {
+        var explorerGroups = document.querySelectorAll('.explorer-group');
+        var layout = [];
+
+        if ( explorerGroups.length !== 0 ) {
+            for ( var i = 0; i < explorerGroups.length; i++ ) {
+                var panes = [];
+
+                var contents = explorerGroups[i].querySelectorAll( '.explorer-scroll' );
+                for ( var i = 0; i < contents.length; i++ ) {
+                    panes.push( contents[i].__folder );
+                }
+
+                layout.push( panes );
+            }
+
+            setSaveJSON( layout );
+        }
+    }
+
+    function getSaveJSON() {
+        var file = null;
+
+        try {
+            if ( FILE_SYSTEM.FileExists(saveFile) ) {
+                file = FILE_SYSTEM.OpenTextFile(saveFile, 1, false);
+            } else {
+                return null;
+            }
+
+            if ( file ) {
+                var data = file.ReadAll();
+                file.Close();
+                return JSON.parse( data );
+            } else {
+                return null;
+            }
+        } catch ( ex ) {
+            try {
+                if ( file ) {
+                    file.Close();
+                }
+            } catch ( ex ) { }
+
+            return null;
+        }
+    }
+
+    function setSaveJSON( data ) {
+        var file = FILE_SYSTEM.CreateTextFile(saveFile, true);
+        file.Write( JSON.stringify(data) );
+        file.Close();
+    }
+
     return {
+            setDefaultFolder: function(path) {
+                if ( FILE_SYSTEM.FolderExists(path) ) {
+                    defaultLocation = path;
+                }
+            },
+
             loadUserJSFile: function() {
-                var userHome = WSHELL.ExpandEnvironmentStrings('%USERPROFILE%');
-                var userJSFile = userHome + "\\" + "tileack.js";
+                var userJSFile = USER_HOME + "\\" + "tileack.js";
 
                 if ( FILE_SYSTEM.FileExists(userJSFile) ) {
                     var script = el('script', {
@@ -519,11 +592,26 @@ var tileack = (function() {
                 }
             },
 
+            setSaveFile: function( location ) {
+                saveFile = location;
+            },
+
             start: function() {
                 // start her up!
                 window.onload = function() {
-                    var setExplorer = newEnvironment( document.body );
-                    setExplorer( newExplorerGroup(6) );
+                    var defaultSetup = getSaveJSON() || [
+                            [
+                                    defaultLocation,
+                                    defaultLocation,
+                                    defaultLocation,
+                                    defaultLocation,
+                                    defaultLocation,
+                                    defaultLocation,
+                                    defaultLocation
+                            ]
+                    ];
+
+                    newEnvironment( window, document.body )( defaultSetup );
                 };
             },
 
