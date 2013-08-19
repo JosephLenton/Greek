@@ -100,6 +100,18 @@ var tileack = (function() {
         return r;
     }
 
+    function newAddExplorer() {
+        var pane = el('a', 'explorer-add-explorer');
+        pane.textContent = '+';
+
+        pane.onclick = function() {
+            pane.parentNode.insertBefore( newExplorer(defaultLocation, true), pane );
+            save();
+        }
+
+        return pane;
+    }
+
     /**
      * @params paths:string[] An array of paths to use for the starting explorer panes.
      * @return HTMLElement An element containing a group of explorer panes.
@@ -111,30 +123,31 @@ var tileack = (function() {
             div.appendChild( newExplorer(paths[i]) );
         }
 
+        div.appendChild( newAddExplorer() );
+
         return div;
     }
 
-    function newExplorer(defaultUrl) {
-        var div = el('div', 'explorer-container');
+    function newExplorer(defaultUrl, animateIn) {
+        var klass = 'explorer-container' + 
+                (animateIn ? ' hide' : '');
+
+        var div = el('div', klass);
         var scroll = el('div', 'explorer-scroll');
         var content = el('div', 'explorer-content');
-        var top = el('input', 'explorer-bar', {
-                type: 'text',
-                keyup: function(ev) {
-                    if ( ev.keyCode !== 27 ) {
-                        var folder = top.value;
-
-                        moveExplorer( scroll, top, folder );
-                    }
-                }
-        });
-
-        div.appendChild( top );
-        div.appendChild( content );
+        
         content.appendChild( scroll );
+        content.appendChild( newInfoBar(scroll, defaultUrl) );
+        div.appendChild( content );
 
         if ( defaultUrl ) {
-            moveExplorer( scroll, top, defaultUrl );
+            moveExplorer( scroll, defaultUrl );
+        }
+
+        if ( animateIn ) {
+            setTimeout( function() {
+                div.className = div.className.replace( ' hide', '' );
+            }, 1);
         }
 
         return div;
@@ -170,6 +183,33 @@ var tileack = (function() {
 
     function run( app, args ) {
         SHELL.ShellExecute( app, args, "", "open", 1 );
+    }
+
+    function hasClass( node, className ) {
+        var post = ' ' + className;
+        var pre = className + ' ';
+        var middle = ' ' + className + ' ';
+
+        var klass = node.className;
+        
+        return klass === className ||
+                klass.indexOf(post) === 0 ||
+                klass.indexOf(pre) === klass.length - pre.length ||
+                klass.indexOf(middle) !== -1 ;
+    }
+
+    function getParent( child, className ) {
+        var pNode = child.parentNode;
+
+        while ( pNode !== null ) {
+            if ( hasClass(pNode, className) ) {
+                return pNode;
+            } else {
+                pNode = pNode.parentNode;
+            }
+        }
+
+        return null;
     }
 
     function el( type ) {
@@ -238,35 +278,63 @@ var tileack = (function() {
         return el( 'input', 'explorer-text-float', data );
     }
 
-    function newInfoBar( folder, content, subFolder ) {
+    function newInfoBar( content, folder ) {
         var info = el('div', 'explorer-info');
-        info.textContent = getParts( folder, "\\", -3, 2 );
+        info.appendChild( el('h2', 'explorer-info-title') );
 
         var controls = el('div', 'explorer-info-controls');
 
         // the buttons
         controls.appendChild( newAnchor('folder', 'explorer-info-control open-explorer', function() {
-            runFile( 'explorer', folder );
+            runFile(
+                    'explorer', 
+                    getParent(info, 'explorer-content').querySelector( '.explorer-scroll' ).__folder
+            );
         } ));
         controls.appendChild( newAnchor('cmd', 'explorer-info-control open-powershell', function() {
-            runFile( 'powershell', folder );
+            runFile(
+                    'powershell', 
+                    getParent(info, 'explorer-content').querySelector( '.explorer-scroll' ).__folder
+            );
+        } ));
+        
+        controls.appendChild( newAnchor('..', 'explorer-info-control open-upfolder', function() {
+            var content = getParent(info, 'explorer-content').querySelector( '.explorer-scroll' );
+            moveExplorer( content, content.__parent );
         } ));
 
-        controls.appendChild( newAnchor('..', 'explorer-info-control open-upfolder', function() {
-            moveExplorer( content, top, subFolder );
+        controls.appendChild( newAnchor('x', 'explorer-info-control close-this', function() {
+            var pNode = getParent( this, 'explorer-container' );
+
+            if ( pNode !== null ) {
+                pNode.parentNode.removeChild( pNode );
+                save();
+            }
         } ));
 
         info.appendChild( controls );
         content.appendChild( info );
 
+        updateInfoBar( info, folder );
+
         return info;
     }
 
-    function moveExplorer( content, top, folder ) {
-        if ( content.className.indexOf('explorer-scroll') === -1 ) {
-            top = content.querySelector( '.explorer-bar' );
-            content = content.querySelector( '.explorer-scroll' );
+    function updateInfoBar( info, folder ) {
+        info.querySelector('.explorer-info-title').textContent = 
+                getParts( folder, "\\", -3, 2 );
+    }
+
+    function moveExplorer( content, folder ) {
+        var scroll, infoBar;
+        if ( hasClass(content, 'explorer-scroll') ) {
+            scroll = content;
+            content = getParent(scroll, 'explorer-content');
+        } else {
+            scroll = content.querySelector('.explorer-scroll');
         }
+
+        infoBar = content.querySelector('.explorer-info');
 
         folder = (folder+"").replace( /\//g, "\\" );
         if ( folder.charAt(folder.length-1) !== "\\" ) {
@@ -277,15 +345,13 @@ var tileack = (function() {
             var files = [];
             var folders = [];
 
-            content.innerHTML = '';
+            scroll.innerHTML = '';
             var folderObjs = FILE_SYSTEM.GetFolder(folder);
             var en;
 
             var parts = folder.split("\\");
             parts.splice( parts.length-2, 2 );
             var subFolder = parts.join( "\\" ) + "\\";
-
-            content.appendChild( newInfoBar(folder, content, subFolder) );
 
             en = new Enumerator(folderObjs.Files);
             for (;!en.atEnd(); en.moveNext()) {
@@ -307,7 +373,7 @@ var tileack = (function() {
                         fileLink.style.background = colour;
                     }
                     
-                    content.appendChild( fileLink );
+                    scroll.appendChild( fileLink );
 
                     files.push({
                             name: name,
@@ -327,8 +393,8 @@ var tileack = (function() {
                     var parts = path.split("\\");
                     var name = parts[ parts.length-1 ] || path;
 
-                    content.appendChild( newAnchor(name, 'explorer-folder' + isFirst, function() {
-                        moveExplorer( content, top, path );
+                    scroll.appendChild( newAnchor(name, 'explorer-folder' + isFirst, function() {
+                        moveExplorer( scroll, path );
                     } ));
 
                     files.push({
@@ -342,11 +408,11 @@ var tileack = (function() {
                 isFirst = '';
             }
 
-            top.value = folder;
+            updateInfoBar( infoBar, folder );
 
-            content.__files = files;
-            content.__parent = subFolder;
-            content.__folder = folder;
+            scroll.__files = files;
+            scroll.__parent = subFolder;
+            scroll.__folder = folder;
 
             save();
         }
@@ -376,7 +442,7 @@ var tileack = (function() {
             input.addEventListener('keydown', function(ev) {
                 if ( ev.key === 'Up' ) {
                     if ( subFolder ) {
-                        moveExplorer( content, null, subFolder );
+                        moveExplorer( content, subFolder );
                     }
 
                     hideFileSelect();
@@ -391,7 +457,7 @@ var tileack = (function() {
                             if ( file.isFile ) {
                                 runFile( 'explorer', file.path );
                             } else {
-                                moveExplorer( content, null, file.path );
+                                moveExplorer( content, file.path );
                             }
 
                             hideFileSelect();
@@ -434,7 +500,7 @@ var tileack = (function() {
                         if ( found.isFile ) {
                             runFile( 'explorer', found.path );
                         } else {
-                            moveExplorer( content, null, found.path );
+                            moveExplorer( content, found.path );
                         }
 
                         hideFileSelect();
