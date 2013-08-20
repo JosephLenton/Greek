@@ -76,9 +76,8 @@ html, body {
     margin-right: 2px;
 
     box-shadow: inset 1px 4px 9px -6px; 
-    border-right: 1px solid #262626;
 
-    transition: width 200ms linear;
+    transition: width 120ms linear;
 }
 .explorer-container.hide {
     width: 0;
@@ -243,11 +242,14 @@ html, body {
                 background: transparent;
             }
 
-            .explorer-file:hover,
-            .explorer-folder:hover {
+            .explorer-file:hover {
                 background: #555;
+            }
+            .explorer-folder:hover {
+                background: #641;
             }
 
             .explorer-folder.first {
                 margin-top: 32px;
+                border-top: 1px solid #641;
             }
