@@ -54,6 +54,8 @@ var tileack = (function() {
 
             'css'   : '#dd5e1d',
 
+            'sql'   : '#980',
+
             'vimrc' : '#875FAB',
 
             'conf'  : '#D2691E',
