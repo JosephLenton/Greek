@@ -41,7 +41,7 @@ var tileack = (function() {
     }
 
     var colours = {
-            'php'   : '#e02366',
+            'php'   : '#B22222',
             'rb'    : '#e02366',
 
             'ts'    : '#8f7fa6',
@@ -50,9 +50,17 @@ var tileack = (function() {
             'html'  : '#00A971',
             'hta'   : '#00A971',
 
+            'md'    : '#556B2F',
+
             'css'   : '#dd5e1d',
 
-            'vimrc' : '#875FAB'
+            'vimrc' : '#875FAB',
+
+            'conf'  : '#D2691E',
+            'log'   : '#800000',
+
+            'bat'   : '#3f4f5f',
+            'exe'   : '#004040'
     };
 
     var onOpenFileCallbacks = [];
