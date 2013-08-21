@@ -12,6 +12,7 @@ input {
 
 a {
     transition:
+            background 120ms linear,
             border-color 120ms linear,
             color 120ms linear;
 }
@@ -40,216 +41,319 @@ html, body {
     position: relative;
 }
 
+.explorer-environment,
 .explorer-group {
     position: absolute;
 
-    left: 0;
     right: 0;
     top: 0;
     bottom: 0;
 }
-
-.explorer-group {
-    overflow: auto;
-
-    overflow-x: auto;
-    overflow-y: hidden;
-    white-space: nowrap;
-
-    vertical-align: top;
+.explorer-environment {
+    left: 0;
 }
 
-.explorer-add-explorer,
-.explorer-container {
-    vertical-align: top;
-    position: relative;
-    display: inline-block;
+    .explorer-group {
+        left: 40px;
 
-    width: 203px;
-    min-height: 100%;
-    height: 100%;
+        overflow: auto;
 
-    padding: 38px 0 6px 0;
+        overflow-x: auto;
+        overflow-y: hidden;
+        white-space: nowrap;
 
-    -moz-box-sizing: border-box;
-    box-sizing: border-box;
-    margin-right: 2px;
+        vertical-align: top;
+    }
+    .explorer-group.hide {
+        visibility: hidden;
+    }
 
-    box-shadow: inset 1px 4px 9px -6px; 
-
-    transition: width 120ms linear;
-}
-.explorer-container.hide {
-    width: 0;
-}
-.explorer-add-explorer {
-    text-align: center;
-
-    font-size: 170px;
-    font-weight: 900;
-
-    color: #444;
-
-    padding-top: 120px;
-}
-.explorer-add-explorer:hover {
-    color: #999;
-}
-    .explorer-text-float {
-        position: absolute;
-        padding: 2px 0 4px 0;
-
-        margin: 0;
-        border: 1px solid #d08900;
-        border-radius: 3px;
-
-        background: orange;
-        color: #000;
-
-        top: 0;
+    .explorer-group,
+    .explorer-projects {
+        transition: left 200ms linear;
+    }
+    .explorer-environment.show-projects > .explorer-group {
+        left: 170px;
+    }
+    .explorer-environment.show-projects > .explorer-projects {
         left: 0;
-
-        width: auto;
-
-        font-weight: 900;
-
-        font-size: 18px;
-
-        box-shadow: 2px 2px 8px rgba( 0, 0, 0, 0.2 );
-    }
-    .explorer-text-float.text-file,
-    .explorer-text-float.text-letter {
-        left: 32px;
-        top : 90px;
-        text-align: center;
     }
 
-    .explorer-bar {
+    .explorer-projects {
+        background: #111;
+        width: 170px;
+        left: -130px;
+
+        padding-top: 64px;
+        -moz-box-sizing: border-box;
+        box-sizing: border-box;
+
         position: absolute;
-
-        left: 0;
-        top: 0;
-        right: 0;
-        height: 32px;
-
-        width: 100%;
-
-        margin: 0;
-        border: 0 none;
-
-        font-size: 21px;
-
-        padding: 6px 0;
-
-        border-bottom: 1px solid #ddd;
-    }
-    .explorer-content {
-        position: absolute;
-
         top: 0;
         bottom: 0;
-        left: 0;
-        right: 0;
     }
-        .explorer-info {
+        /**
+         * The little button that opens and closes
+         * the projects pane.
+         */
+        .explorer-projects-open {
             position: absolute;
+            right: 10px;
+            top: 10px;
+
+            color: #444;
+            border: 1px solid #444;
+            border-radius: 3px;
+
+            padding: 0 0 3px 0;
+            text-align: center;
+            line-height: 19px;
+        }
+        .explorer-projects-open:hover {
+            color: #fff;
+            border-color: #fff;
+        }
+
+        .explorer-add-project,
+        .explorer-project {
+            display: inline-block;
+            width: 150px;
+            margin-left: 10px;
+            padding: 6px 12px;
+
+            -moz-box-sizing: border-box;
+            box-sizing: border-box;
+
+            text-align: center;
+            vertical-align: right;
+
+        }
+        .explorer-project {
+            font-size: 22px;
+            color: #aaa;
+            padding: 2px 0 6px 0;
+            position: relative;
+        }
+        .explorer-add-project {
+            text-align: center;
+            font-size: 48px;
+        }
+        .explorer-project-button,
+        .explorer-add-project {
+            color: #333;
+        }
+        .explorer-project-button:hover,
+        .explorer-project:hover,
+        .explorer-add-project:hover {
+            color: #fff;
+        }
+            .explorer-project-button {
+                font-size: 12px;
+                position: absolute;
+                bottom: 6px;
+            }
+            .explorer-project-button.delete {
+                left: 12px;
+            }
+            .explorer-project-button.rename {
+                left: 50px;
+            }
+            .explorer-project-name {
+                cursor: pointer;
+            }
+
+    .explorer-add-explorer,
+    .explorer-container {
+        vertical-align: top;
+        position: relative;
+        display: inline-block;
+
+        width: 203px;
+        min-height: 100%;
+        height: 100%;
+
+        padding: 38px 0 6px 0;
+
+        -moz-box-sizing: border-box;
+        box-sizing: border-box;
+        margin-right: 2px;
+
+        box-shadow: inset 1px 4px 9px -6px; 
+
+        transition: width 120ms linear;
+    }
+    .explorer-container.hide {
+        width: 0;
+    }
+    .explorer-add-explorer {
+        text-align: center;
+
+        font-size: 170px;
+        font-weight: 900;
+
+        color: #444;
+
+        padding-top: 120px;
+    }
+    .explorer-add-explorer:hover {
+        color: #999;
+    }
+        .explorer-text-float {
+            position: absolute;
+            padding: 2px 0 4px 0;
+
+            margin: 0;
+            border: 1px solid #d08900;
+            border-radius: 3px;
+
+            background: orange;
+            color: #000;
 
             top: 0;
             left: 0;
-            right: 0;
 
-            height: 64px;
+            width: auto;
 
-            margin-bottom: 24px;
+            font-weight: 900;
 
-            background: #333;
+            font-size: 18px;
+
+            box-shadow: 2px 2px 8px rgba( 0, 0, 0, 0.2 );
         }
-            .explorer-info-title {
-                margin: 0;
-                padding: 0;
+        .explorer-text-float.text-file,
+        .explorer-text-float.text-letter {
+            left: 32px;
+            top : 90px;
+            text-align: center;
+        }
 
-                position: absolute;
-
-                top: 3px;
-                left: 6px;
-                right: 6px;
-                bottom: 0;
-
-                font-size: 21px;
-            }
-            .explorer-info-controls {
-                position: absolute;
-
-                top: 32px;
-                left: 0;
-                right: 0;
-            }
-                .explorer-info-control {
-                    display: inline;
-
-                    vertical-align: middle;
-
-                    height: 32px;
-                    width: 32px;
-
-                    margin-right: 4px;
-
-                    border: 1px solid transparent;
-                    border-radius: 5px;
-
-                    padding: 0 4px 1px 4px;
-
-                    font-size: 12px;
-                }
-                .explorer-info-control:hover {
-                    border: 1px solid #666;
-                }
-                .explorer-info-control.close-this {
-                    margin-left: 12px;
-                }
-        .explorer-scroll {
+        .explorer-bar {
             position: absolute;
 
-            top: 64px;
+            left: 0;
+            top: 0;
+            right: 0;
+            height: 32px;
+
+            width: 100%;
+
+            margin: 0;
+            border: 0 none;
+
+            font-size: 21px;
+
+            padding: 6px 0;
+
+            border-bottom: 1px solid #ddd;
+        }
+        .explorer-content {
+            position: absolute;
+
+            top: 0;
+            bottom: 0;
             left: 0;
             right: 0;
-
-            min-width: 100%;
-            width: 100%;
-            min-height: 100%;
-            height: 100%;
-
-            overflow: hidden;
-            overflow-x: hidden;
-            overflow-y: auto;
-
-            white-space: nowrap;
         }
-            .explorer-file,
-            .explorer-folder {
-                display: block;
+            .explorer-info {
+                position: absolute;
+
+                top: 0;
+                left: 0;
+                right: 0;
+
+                height: 64px;
+
+                margin-bottom: 24px;
+
+                background: #333;
+            }
+                .explorer-info-title {
+                    margin: 0;
+                    padding: 0;
+
+                    position: absolute;
+
+                    top: 3px;
+                    left: 6px;
+                    right: 6px;
+                    bottom: 0;
+
+                    font-size: 21px;
+                }
+                .explorer-info-controls {
+                    position: absolute;
+
+                    top: 32px;
+                    left: 0;
+                    right: 0;
+                }
+                    .explorer-info-control {
+                        display: inline;
+
+                        vertical-align: middle;
+
+                        height: 32px;
+                        width: 32px;
+
+                        margin-right: 4px;
+
+                        border: 1px solid transparent;
+                        border-radius: 5px;
+
+                        padding: 0 4px 1px 4px;
+
+                        font-size: 12px;
+                    }
+                    .explorer-info-control:hover {
+                        border: 1px solid #666;
+                    }
+                    .explorer-info-control.close-this {
+                        margin-left: 12px;
+                    }
+            .explorer-scroll {
+                position: absolute;
+
+                top: 64px;
+                left: 0;
+                right: 0;
 
                 min-width: 100%;
                 width: 100%;
-                max-width: 100%;
+                min-height: 100%;
+                height: 100%;
 
-                padding: 3px 18px;
-                font-size: 18px;
+                overflow: hidden;
+                overflow-x: hidden;
+                overflow-y: auto;
 
-                -moz-box-sizing: border-box;
-                box-sizing: border-box;
-
-                background: transparent;
+                white-space: nowrap;
             }
+                .explorer-file,
+                .explorer-folder {
+                    display: block;
 
-            .explorer-file:hover {
-                background: #555;
-            }
-            .explorer-folder:hover {
-                background: #641;
-            }
+                    min-width: 100%;
+                    width: 100%;
+                    max-width: 100%;
 
-            .explorer-folder.first {
-                margin-top: 32px;
-                border-top: 1px solid #641;
-            }
+                    padding: 3px 18px;
+                    font-size: 18px;
+
+                    -moz-box-sizing: border-box;
+                    box-sizing: border-box;
+
+                    background: transparent;
+                }
+
+                .explorer-file:hover {
+                    background: #fff !important;
+                    color: #000;
+                }
+                .explorer-folder:hover {
+                    background: #641;
+                }
+
+                .explorer-folder.first {
+                    margin-top: 32px;
+                    border-top: 1px solid #641;
+                }

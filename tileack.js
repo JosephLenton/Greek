@@ -6,8 +6,10 @@ var tileack = (function() {
     var SHELL = new ActiveXObject("Shell.Application");
     var USER_HOME = WSHELL.ExpandEnvironmentStrings('%USERPROFILE%');
 
-    var saveFile = USER_HOME + "\\" + 'tileack.save.json';
+    var saveFile = USER_HOME + "\\" + '.tileack.save.json';
     var defaultLocation = USER_HOME;
+
+    var DEFAULT_PROJECT_NAME = 'project';
 
     /*
      * Key Codes
@@ -42,6 +44,7 @@ var tileack = (function() {
             'php'   : '#e02366',
             'rb'    : '#e02366',
 
+            'ts'    : '#8f7fa6',
             'js'    : '#00A3DC',
 
             'html'  : '#00A971',
@@ -53,6 +56,8 @@ var tileack = (function() {
     };
 
     var onOpenFileCallbacks = [];
+
+    var currentExplorer = null;
 
     function tryOpenFileCallbacks( app, path ) {
         for ( var i = 0; i < onOpenFileCallbacks[i]; i++ ) {
@@ -116,11 +121,21 @@ var tileack = (function() {
      * @params paths:string[] An array of paths to use for the starting explorer panes.
      * @return HTMLElement An element containing a group of explorer panes.
      */
-    function newExplorerGroup( paths ) {
-        var div = el('div', 'explorer-group');
+    function newExplorerGroup( environment, projectsBar, folders, hide ) {
+        var div = el('div', 'explorer-group' + (hide ? ' hide' : ''));
 
-        for ( var i = 0; i < paths.length; i++ ) {
-            div.appendChild( newExplorer(paths[i]) );
+        if ( folders === null ) {
+            folders = [ 
+                    defaultLocation,
+                    defaultLocation,
+                    defaultLocation,
+                    defaultLocation,
+                    defaultLocation
+            ];
+        }
+
+        for ( var i = 0; i < folders.length; i++ ) {
+            div.appendChild( newExplorer(folders[i]) );
         }
 
         div.appendChild( newAddExplorer() );
@@ -141,7 +156,7 @@ var tileack = (function() {
         div.appendChild( content );
 
         if ( defaultUrl ) {
-            moveExplorer( scroll, defaultUrl );
+            moveExplorer( scroll, defaultUrl, true );
         }
 
         if ( animateIn ) {
@@ -194,7 +209,7 @@ var tileack = (function() {
         
         return klass === className ||
                 klass.indexOf(post) === 0 ||
-                klass.indexOf(pre) === klass.length - pre.length ||
+                klass.indexOf(pre) === (klass.length - pre.length)+1 ||
                 klass.indexOf(middle) !== -1 ;
     }
 
@@ -325,7 +340,7 @@ var tileack = (function() {
                 getParts( folder, "\\", -3, 2 );
     }
 
-    function moveExplorer( content, folder ) {
+    function moveExplorer( content, folder, noSave ) {
         var scroll, infoBar;
         if ( hasClass(content, 'explorer-scroll') ) {
             scroll = content;
@@ -414,12 +429,37 @@ var tileack = (function() {
             scroll.__parent = subFolder;
             scroll.__folder = folder;
 
-            save();
+            if ( ! noSave ) {
+                save();
+            }
         }
     }
 
-    function newEnvironment( controlsDest, dest ) {
-        var currentExplorer = null;
+    function showExplorer( environment, div, skipSave ) {
+        var groups = environment.querySelectorAll( '.explorer-group' );
+
+        if ( currentExplorer !== div ) {
+            var oldExplorer = currentExplorer;
+            currentExplorer = null;
+
+            for ( var i = 0; i < groups.length; i++ ) {
+                var group = groups[i];
+
+                if ( group === div ) {
+                    group.className = group.className.replace(' hide', '');
+                    currentExplorer = div;
+                } else if ( group.className.indexOf(' hide') === -1 ) {
+                    group.className += ' hide';
+                }
+            }
+
+            if ( skipSave ) {
+                save();
+            }
+        }
+    }
+
+    function newEnvironment( controlsDest, saveData ) {
         var isCtrlDown = false;
 
         var removeCommandLetters = function() {
@@ -557,6 +597,8 @@ var tileack = (function() {
 
                         showFileSelect( explorer );
                     }
+
+                    ev.preventDefault();
                 }
             }
         } );
@@ -571,37 +613,173 @@ var tileack = (function() {
             }
         } );
 
-        return function( initialPaths ) {
-            if ( currentExplorer !== null ) {
-                currentExplorer.parentNode.removeChild( currentExplorer );
+        if ( currentExplorer !== null ) {
+            currentExplorer.parentNode.removeChild( currentExplorer );
+        }
+
+        var environment = el('div', 'explorer-environment');
+        var projectsBar = newProjectsBar(environment);
+
+        if ( saveData === null || saveData.length === 0 ) {
+            var explorerGroup = newExplorerGroup( environment, projectsBar, null, false );
+            environment.appendChild( explorerGroup );
+
+            addProjectsBarStub(
+                    projectsBar,
+                    newProjectStub(environment, explorerGroup, DEFAULT_PROJECT_NAME)
+            );
+
+            showExplorer( explorerGroup );
+        } else {
+            var altShowExp = null;
+
+            for ( var i = 0; i < saveData.length; i++ ) {
+                var expData = saveData[i];
+
+                var explorerGroup = newExplorerGroup( environment, projectsBar, expData.folders, expData.hide );
+                environment.appendChild( explorerGroup );
+                addProjectsBarStub(
+                        projectsBar,
+                        newProjectStub(environment, explorerGroup, expData.name)
+                );
+
+                // show the first explorer, or the one marked
+                if ( i === 0 ) {
+                    altShowExp = explorerGroup;
+                }
+
+                if ( ! expData.hide ) {
+                    showExplorer( explorerGroup );
+                    altShowExp = null;
+                }
             }
 
-            // todo support more than 1 initial path
-            var explorerGroup = newExplorerGroup( initialPaths[0] );
-
-            currentExplorer = explorerGroup;
-
-            dest.appendChild( currentExplorer );
+            if ( altShowExp !== null ) {
+                altShowExp.className = altShowExp.className.replace( ' hide', '' );
+                showExplorer( altShowExp );
+            }
         }
+
+        environment.appendChild( projectsBar );
+
+        return environment;
+    }
+
+    function addProjectsBarStub(projectsBar, stub) {
+        projectsBar.insertBefore(
+                stub,
+                projectsBar.querySelector('.explorer-add-project') 
+        );
+
+        save();
+    }
+
+    function newProjectsBar(environment) {
+        var projectsBar = el('div', 'explorer-projects');
+
+        projectsBar.appendChild(
+                el('a', 'explorer-projects-open', {
+                        text: '>>',
+                        click: function() {
+                            if ( environment.className.indexOf(' show-projects') === -1 ) {
+                                environment.className += ' show-projects';
+                            } else {
+                                environment.className = environment.className.replace(' show-projects', '');
+                            }
+                        }
+                })
+        );
+
+        var addProject = el('a', 'explorer-add-project', {
+                    text: '+',
+                    click: function() {
+                        var newExp = newExplorerGroup( environment, projectsBar, null );
+                        environment.appendChild( newExp, addProject );
+
+                        addProjectsBarStub(
+                                projectsBar, 
+                                newProjectStub( environment, newExp, DEFAULT_PROJECT_NAME )
+                        );
+
+                        showExplorer( environment, newExp );
+                    }
+        });
+
+        projectsBar.appendChild( addProject );
+
+        return projectsBar;
+    }
+
+    function newProjectStub( environment, explorerGroup, name ) {
+        var stub = el('div', 'explorer-project', {
+                click: function() {
+                    showExplorer( environment, explorerGroup );
+                }
+        });
+
+        var name = el('h3', 'explorer-project-name', { text: name });
+
+        var rename = el('a', 'explorer-project-button rename', {
+                text: 'rename',
+                click: function() {
+                    var r = window.prompt("set name", name.textContent);
+
+                    if ( r !== null && r !== '' ) {
+                        name.textContent = r;
+                        save();
+                    }
+                }
+        });
+
+        var deleteStub = el('a', 'explorer-project-button delete', {
+                text: 'del',
+                click: function() {
+                    if ( environment.querySelectorAll('.explorer-project').length > 1 ) {
+                        explorerGroup.parentNode.removeChild( explorerGroup );
+                        stub.parentNode.removeChild( stub );
+
+                        if ( explorerGroup.className.indexOf(' hide') === -1 ) {
+                            showExplorer( environment.querySelector('.explorer-group') );
+                        }
+
+                        save();
+                    }
+                }
+        });
+
+        stub.appendChild( name );
+        stub.appendChild( rename );
+        stub.appendChild( deleteStub );
+
+        return stub;
     }
 
     function save() {
         var explorerGroups = document.querySelectorAll('.explorer-group');
-        var layout = [];
+        var projectNames = document.querySelectorAll('.explorer-project-name');
+        var saveGroups = [];
 
-        if ( explorerGroups.length !== 0 ) {
+        if ( explorerGroups.length !== 0 && projectNames.length !== 0 ) {
             for ( var i = 0; i < explorerGroups.length; i++ ) {
-                var panes = [];
+                var explorerGroup = explorerGroups[i];
+                var name = projectNames[i].textContent;
 
-                var contents = explorerGroups[i].querySelectorAll( '.explorer-scroll' );
-                for ( var i = 0; i < contents.length; i++ ) {
-                    panes.push( contents[i].__folder );
+                var folders = [];
+
+                var contents = explorerGroup.querySelectorAll( '.explorer-scroll' );
+
+                for ( var j = 0; j < contents.length; j++ ) {
+                    folders.push( contents[j].__folder );
                 }
 
-                layout.push( panes );
+                saveGroups.push({
+                        name: name,
+                        folders: folders,
+                        hide: !hasClass( explorerGroup, 'hide' )
+                });
             }
 
-            setSaveJSON( layout );
+            setSaveJSON( saveGroups );
         }
     }
 
@@ -665,19 +843,9 @@ var tileack = (function() {
             start: function() {
                 // start her up!
                 window.onload = function() {
-                    var defaultSetup = getSaveJSON() || [
-                            [
-                                    defaultLocation,
-                                    defaultLocation,
-                                    defaultLocation,
-                                    defaultLocation,
-                                    defaultLocation,
-                                    defaultLocation,
-                                    defaultLocation
-                            ]
-                    ];
-
-                    newEnvironment( window, document.body )( defaultSetup );
+                    document.body.appendChild(
+                            newEnvironment( window, getSaveJSON() )
+                    );
                 };
             },
 
