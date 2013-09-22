@@ -54,7 +54,7 @@ html, body {
 }
 
     .explorer-group {
-        left: 40px;
+        left: 60px;
 
         overflow: auto;
 
@@ -73,7 +73,7 @@ html, body {
         transition: left 200ms linear;
     }
     .explorer-environment.show-projects > .explorer-group {
-        left: 170px;
+        left: 180px;
     }
     .explorer-environment.show-projects > .explorer-projects {
         left: 0;
@@ -81,8 +81,8 @@ html, body {
 
     .explorer-projects {
         background: #111;
-        width: 170px;
-        left: -130px;
+        width: 180px;
+        left: -120px;
 
         padding-top: 64px;
         -moz-box-sizing: border-box;
@@ -91,6 +91,10 @@ html, body {
         position: absolute;
         top: 0;
         bottom: 0;
+
+        overflow: scroll;
+        overflow-x: hidden;
+        overflow-y: auto;
     }
         /**
          * The little button that opens and closes
