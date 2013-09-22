@@ -164,8 +164,8 @@ var tileack = (function() {
      * @params paths:string[] An array of paths to use for the starting explorer panes.
      * @return HTMLElement An element containing a group of explorer panes.
      */
-    function newExplorerGroup( environment, projectsBar, folders, hide ) {
-        var div = el('div', 'explorer-group' + (hide ? ' hide' : ''));
+    function newExplorerGroup( environment, projectsBar, folders, show ) {
+        var div = el('div', 'explorer-group' + (!show ? ' hide' : ''));
 
         if ( folders === null ) {
             folders = [ 
@@ -250,16 +250,12 @@ var tileack = (function() {
     }
 
     function hasClass( node, className ) {
-        var post = ' ' + className;
-        var pre = className + ' ';
-        var middle = ' ' + className + ' ';
-
         var klass = node.className;
         
         return klass === className ||
-                klass.indexOf(post) === 0 ||
-                klass.indexOf(pre) === (klass.length - pre.length)+1 ||
-                klass.indexOf(middle) !== -1 ;
+                klass.indexOf(      className + ' ') === 0 ||
+                klass.indexOf(' ' + className      ) === (klass.length - (className.length + 1)) ||
+                klass.indexOf(' ' + className + ' ') !== -1 ;
     }
 
     function getParent( child, className ) {
@@ -517,7 +513,7 @@ var tileack = (function() {
                 }
             }
 
-            if ( skipSave ) {
+            if ( ! skipSave ) {
                 save();
             }
         }
@@ -685,26 +681,29 @@ var tileack = (function() {
         var projectsBar = newProjectsBar(environment, isProjectsOpen);
 
         if ( saveData === null || saveData.length === 0 ) {
-            var explorerGroup = newExplorerGroup( environment, projectsBar, null, false );
+            var explorerGroup = newExplorerGroup( environment, projectsBar, null, true );
             environment.appendChild( explorerGroup );
 
             addProjectsBarStub(
                     projectsBar,
-                    newProjectStub(environment, explorerGroup, DEFAULT_PROJECT_NAME)
+                    newProjectStub(environment, explorerGroup, DEFAULT_PROJECT_NAME),
+                    true
             );
 
-            showExplorer( explorerGroup );
+            showExplorer( environment, explorerGroup );
         } else {
-            var altShowExp = null;
+            var altShowExp = null,
+                onlyShowFirst = false;
 
             for ( var i = 0; i < saveData.length; i++ ) {
                 var expData = saveData[i];
 
-                var explorerGroup = newExplorerGroup( environment, projectsBar, expData.folders, expData.hide );
+                var explorerGroup = newExplorerGroup( environment, projectsBar, expData.folders, !onlyShowFirst && expData.show );
                 environment.appendChild( explorerGroup );
                 addProjectsBarStub(
                         projectsBar,
-                        newProjectStub(environment, explorerGroup, expData.name)
+                        newProjectStub(environment, explorerGroup, expData.name),
+                        true
                 );
 
                 // show the first explorer, or the one marked
@@ -712,15 +711,14 @@ var tileack = (function() {
                     altShowExp = explorerGroup;
                 }
 
-                if ( ! expData.hide ) {
-                    showExplorer( explorerGroup );
+                if ( expData.show ) {
                     altShowExp = null;
+                    onlyShowFirst = true;
                 }
             }
 
             if ( altShowExp !== null ) {
-                altShowExp.className = altShowExp.className.replace( ' hide', '' );
-                showExplorer( altShowExp );
+                showExplorer( environment, altShowExp );
             }
         }
 
@@ -729,13 +727,15 @@ var tileack = (function() {
         return environment;
     }
 
-    function addProjectsBarStub(projectsBar, stub) {
+    function addProjectsBarStub(projectsBar, stub, skipSave) {
         projectsBar.insertBefore(
                 stub,
                 projectsBar.querySelector('.explorer-add-project') 
         );
 
-        save();
+        if ( ! skipSave ) {
+            save();
+        }
     }
 
     function openProjectsBar( environment ) {
@@ -773,7 +773,7 @@ var tileack = (function() {
         var addProject = el('a', 'explorer-add-project', {
                     text: '+',
                     click: function() {
-                        var newExp = newExplorerGroup( environment, projectsBar, null );
+                        var newExp = newExplorerGroup( environment, projectsBar, null, false );
                         environment.appendChild( newExp, addProject );
 
                         addProjectsBarStub(
@@ -823,7 +823,7 @@ var tileack = (function() {
                         stub.parentNode.removeChild( stub );
 
                         if ( explorerGroup.className.indexOf(' hide') === -1 ) {
-                            showExplorer( environment.querySelector('.explorer-group') );
+                            showExplorer( environment, environment.querySelector('.explorer-group') );
                         }
 
                         save();
@@ -859,7 +859,7 @@ var tileack = (function() {
                 saveGroups.push({
                         name: name,
                         folders: folders,
-                        hide: !hasClass( explorerGroup, 'hide' )
+                        show: ! hasClass( explorerGroup, 'hide' )
                 });
             }
 
