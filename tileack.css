@@ -329,13 +329,21 @@ html, body {
                 white-space: nowrap;
             }
                 .explorer-file,
+                .explorer-file-link,
                 .explorer-folder {
                     display: block;
 
                     min-width: 100%;
                     width: 100%;
                     max-width: 100%;
+                }
 
+                .explorer-file {
+                    position: relative;
+                }
+
+                .explorer-file-link,
+                .explorer-folder {
                     padding: 3px 18px;
                     font-size: 18px;
 
@@ -345,10 +353,40 @@ html, body {
                     background: transparent;
                 }
 
-                .explorer-file:hover {
+                .explorer-file,
+                .explorer-file-link,
+                .explorer-folder {
+                    width: 100%;
+                }
+
+                .explorer-file-link {
+                    height: 100%;
+                }
+
+                .explorer-file-link-alt {
+                    position: absolute;
+
+                    right: 0;
+                    top: 0;
+                    bottom: 0;
+
+                    width: 48px;
+                    height: 100%;
+
+                    display: block;
+                }
+
+                .explorer-file-link-alt {
+                    background: rgba( 255, 255, 255, 0.3 );
+                    z-index: 10;
+                }
+
+                .explorer-file-link:hover,
+                .explorer-file-link-alt:hover {
                     background: #fff !important;
                     color: #000;
                 }
+
                 .explorer-folder:hover {
                     background: #641;
                 }

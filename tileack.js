@@ -46,6 +46,7 @@ var tileack = (function() {
 
             'ts'    : '#8f7fa6',
             'js'    : '#00A3DC',
+            'jsx'   : '#1190C0',
 
             'html'  : '#00A971',
             'hta'   : '#00A971',
@@ -65,25 +66,39 @@ var tileack = (function() {
             'exe'   : '#004040'
     };
 
-    var onOpenFileCallbacks = [];
+    var openWiths = {};
+    var openWithsAlt = {};
 
     var currentExplorer = null;
 
-    function tryOpenFileCallbacks( app, path ) {
-        for ( var i = 0; i < onOpenFileCallbacks[i]; i++ ) {
-            if ( onOpenFileCallbacks[i](app, path) === false ) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    function getExtensionColour(name) {
+    /**
+     * Returns the file extension for the name given.
+     *
+     * The extension does *not* include the '.'. So the extension of 
+     * 'index.html', would be just 'html'.
+     *
+     * If no extension can be derived, such as giving 'index' on it's own, then
+     * this will return an empty string.
+     *
+     * File that start with a dot however, such as '.vimrc', will return the
+     * name as their file extension. So in that example, it will return 'vimrc'.
+     *
+     * @param name The path of file name, to find the extension of.
+     * @return An empty string if no extension found, otherwise the extension.
+     */
+    function getExtension( name ) {
         var parts = name.split('.');
         var extension = parts[parts.length-1];
 
-        return colours[extension];
+        if ( extension.indexOf('\\') !== -1 || extension.indexOf('/') !== -1 ) {
+            return '';
+        } else {
+            return extension;
+        }
+    }
+
+    function getExtensionColour(name) {
+        return colours[getExtension(name)];
     }
 
     function getParts(str, seperator, index, len) {
@@ -198,12 +213,18 @@ var tileack = (function() {
         return el( 'a', className, { text: name, click: action } );
     }
 
-    function runFile( app, path ) {
-        if ( tryOpenFileCallbacks(app, path) === false ) {
-            return;
+    function openFile( path ) {
+        var ext = getExtension( path );
+
+        if ( ext && openWiths.hasOwnProperty(ext) ) {
+            runFile( openWiths[ext], path );
         } else {
-            run( app, path.replace(/ /g, "\\ ") );
+            runFile( 'explorer', path );
         }
+    }
+
+    function runFile( app, path ) {
+        run( app, path.replace(/ /g, "\\ ") );
     }
 
     function run( app, args ) {
@@ -309,13 +330,17 @@ var tileack = (function() {
 
         var controls = el('div', 'explorer-info-controls');
 
-        // the buttons
+        /* the buttons */
+        
+        // open the folder in explorer
         controls.appendChild( newAnchor('folder', 'explorer-info-control open-explorer', function() {
             runFile(
                     'explorer', 
                     getParent(info, 'explorer-content').querySelector( '.explorer-scroll' ).__folder
             );
         } ));
+
+        // open a powershell folder at this location
         controls.appendChild( newAnchor('cmd', 'explorer-info-control open-powershell', function() {
             runFile(
                     'powershell', 
@@ -323,11 +348,13 @@ var tileack = (function() {
             );
         } ));
         
+        // move up one folder
         controls.appendChild( newAnchor('..', 'explorer-info-control open-upfolder', function() {
             var content = getParent(info, 'explorer-content').querySelector( '.explorer-scroll' );
             moveExplorer( content, content.__parent );
         } ));
 
+        // close this folder
         controls.appendChild( newAnchor('x', 'explorer-info-control close-this', function() {
             var pNode = getParent( this, 'explorer-container' );
 
@@ -386,19 +413,28 @@ var tileack = (function() {
                     var parts = path.split("\\");
                     var name = parts[ parts.length-1 ] || path;
 
-                    var fileLink = newAnchor(name, 'explorer-file', function() {
-                        runFile( 'explorer', path );
+                    var fileLinkWrap = el( 'div', 'explorer-file' );
+
+                    var fileLink = newAnchor(name, 'explorer-file-link', function() {
+                        openFile( path );
                     });
-                    var fileLink = newAnchor(name, 'explorer-file', function() {
-                        runFile( 'explorer', path );
-                    });
+
+                    fileLinkWrap.appendChild( fileLink );
+
+                    if ( openWithsAlt.hasOwnProperty(getExtension(path)) ) {
+                        var altLink = newAnchor('', 'explorer-file-link-alt', function() {
+                            runFile( openWithsAlt[getExtension(path)], path );
+                        });
+
+                        fileLinkWrap.appendChild( altLink );
+                    }
 
                     var colour = getExtensionColour( name );
                     if ( colour ) {
-                        fileLink.style.background = colour;
+                        fileLinkWrap.style.background = colour;
                     }
                     
-                    scroll.appendChild( fileLink );
+                    scroll.appendChild( fileLinkWrap );
 
                     files.push({
                             name: name,
@@ -505,7 +541,7 @@ var tileack = (function() {
 
                         if ( index === 0 && file.name.length === text.length ) {
                             if ( file.isFile ) {
-                                runFile( 'explorer', file.path );
+                                openFile( file.path );
                             } else {
                                 moveExplorer( content, file.path );
                             }
@@ -548,7 +584,7 @@ var tileack = (function() {
 
                     if ( found ) {
                         if ( found.isFile ) {
-                            runFile( 'explorer', found.path );
+                            openFile( 'explorer', found.path );
                         } else {
                             moveExplorer( content, found.path );
                         }
@@ -832,6 +868,8 @@ var tileack = (function() {
                 if ( FILE_SYSTEM.FolderExists(path) ) {
                     defaultLocation = path;
                 }
+
+                return this;
             },
 
             loadUserJSFile: function() {
@@ -844,10 +882,14 @@ var tileack = (function() {
 
                     document.getElementsByTagName('head')[0].appendChild( script );
                 }
+
+                return this;
             },
 
             setSaveFile: function( location ) {
                 saveFile = location;
+
+                return this;
             },
 
             start: function() {
@@ -857,10 +899,25 @@ var tileack = (function() {
                             newEnvironment( window, getSaveJSON() )
                     );
                 };
+
+                return this;
             },
 
-            onOpenFile: function(callback) {
-                onOpenFileCallbacks.push( callback );
+            openWith: function( extension, app, altApp ) {
+                // remove the starting dot, if it's there
+                if ( extension.charAt(0) === '.' ) {
+                    extension = extension.substring( 1 );
+                }
+
+                if ( app ) {
+                    openWiths[ extension ] = app;
+                }
+
+                if ( altApp ) {
+                    openWithsAlt[ extension ] = altApp;
+                }
+
+                return this;
             }
     };
 })();
