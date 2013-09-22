@@ -40,11 +40,15 @@ var tileack = (function() {
         return letters;
     }
 
-    var colours = {
-            'php'   : '#B22222',
+    var extensionColours = {
+            // source codes
+            
+            'qb'    : '#ff1493',
             'rb'    : '#e02366',
 
-            'ts'    : '#8f7fa6',
+            'php'   : '#B22222',
+
+            'ts'    : '#ff0066',
             'js'    : '#00A3DC',
             'jsx'   : '#1190C0',
 
@@ -57,14 +61,28 @@ var tileack = (function() {
 
             'sql'   : '#980',
 
+            // configs & logs
+            
             'vimrc' : '#875FAB',
 
             'conf'  : '#D2691E',
             'log'   : '#800000',
 
+            // executables
+            
             'bat'   : '#3f4f5f',
-            'exe'   : '#004040'
+            'exe'   : '#004040',
+
+            // images
+
+            'png'   : '#556b2f',
+            'jpg'   : '#808000',
+            'jpeg'  : '#808000',
+            'gif'   : '#6b8e23'
     };
+
+    var theOneEnvironment = null;
+    var isProjectsOpen = true;
 
     var openWiths = {};
     var openWithsAlt = {};
@@ -98,7 +116,7 @@ var tileack = (function() {
     }
 
     function getExtensionColour(name) {
-        return colours[getExtension(name)];
+        return extensionColours[getExtension(name)];
     }
 
     function getParts(str, seperator, index, len) {
@@ -505,7 +523,7 @@ var tileack = (function() {
         }
     }
 
-    function newEnvironment( controlsDest, saveData ) {
+    function newEnvironment( controlsDest, saveData, isProjectsOpen ) {
         var isCtrlDown = false;
 
         var removeCommandLetters = function() {
@@ -664,7 +682,7 @@ var tileack = (function() {
         }
 
         var environment = el('div', 'explorer-environment');
-        var projectsBar = newProjectsBar(environment);
+        var projectsBar = newProjectsBar(environment, isProjectsOpen);
 
         if ( saveData === null || saveData.length === 0 ) {
             var explorerGroup = newExplorerGroup( environment, projectsBar, null, false );
@@ -720,18 +738,34 @@ var tileack = (function() {
         save();
     }
 
-    function newProjectsBar(environment) {
+    function openProjectsBar( environment ) {
+        if ( environment.className.indexOf(' show-projects') === -1 ) {
+            environment.className += ' show-projects';
+        }
+    }
+
+    function closeProjectsBar( environment ) {
+        if ( environment.className.indexOf(' show-projects') !== -1 ) {
+            environment.className = environment.className.replace(' show-projects', '');
+        }
+    }
+
+    function toggleProjectsBar( environment ) {
+        if ( environment.className.indexOf(' show-projects') === -1 ) {
+            environment.className += ' show-projects';
+        } else {
+            environment.className = environment.className.replace(' show-projects', '');
+        }
+    }
+
+    function newProjectsBar(environment, isProjectsOpen) {
         var projectsBar = el('div', 'explorer-projects');
 
         projectsBar.appendChild(
                 el('a', 'explorer-projects-open', {
                         text: '>>',
                         click: function() {
-                            if ( environment.className.indexOf(' show-projects') === -1 ) {
-                                environment.className += ' show-projects';
-                            } else {
-                                environment.className = environment.className.replace(' show-projects', '');
-                            }
+                            toggleProjectsBar( environment );
                         }
                 })
         );
@@ -752,6 +786,10 @@ var tileack = (function() {
         });
 
         projectsBar.appendChild( addProject );
+
+        if ( isProjectsOpen ) {
+            openProjectsBar( environment );
+        }
 
         return projectsBar;
     }
@@ -864,6 +902,10 @@ var tileack = (function() {
     }
 
     return {
+            addExtensionColor: function( ext, color ) {
+                extensionColours[ getExtension(ext) ] = color;
+            },
+
             setDefaultFolder: function(path) {
                 if ( FILE_SYSTEM.FolderExists(path) ) {
                     defaultLocation = path;
@@ -886,6 +928,26 @@ var tileack = (function() {
                 return this;
             },
 
+            openProjectsBar: function() {
+                if ( theOneEnvironment === null ) {
+                    isProjectsOpen = true;
+                } else {
+                    openProjectsBar( theOneEnvrionment );
+                }
+
+                return this;
+            },
+
+            closeProjectsBar: function() {
+                if ( theOneEnvironment === null ) {
+                    isProjectsOpen = false;
+                } else {
+                    closeProjectsBar( theOneEnvrionment );
+                }
+
+                return this;
+            },
+
             setSaveFile: function( location ) {
                 saveFile = location;
 
@@ -895,9 +957,9 @@ var tileack = (function() {
             start: function() {
                 // start her up!
                 window.onload = function() {
-                    document.body.appendChild(
-                            newEnvironment( window, getSaveJSON() )
-                    );
+                    theOneEnvironment = newEnvironment( window, getSaveJSON(), isProjectsOpen )
+
+                    document.body.appendChild( theOneEnvironment );
                 };
 
                 return this;
