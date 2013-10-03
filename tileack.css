@@ -342,8 +342,8 @@ html, body {
                 white-space: nowrap;
             }
                 .explorer-file,
-                .explorer-file-link,
-                .explorer-folder {
+                .explorer-folder,
+                .explorer-item-link {
                     display: block;
 
                     min-width: 100%;
@@ -351,12 +351,12 @@ html, body {
                     max-width: 100%;
                 }
 
-                .explorer-file {
+                .explorer-file,
+                .explorer-folder {
                     position: relative;
                 }
 
-                .explorer-file-link,
-                .explorer-folder {
+                .explorer-item-link {
                     padding: 3px 18px;
                     font-size: 18px;
 
@@ -367,16 +367,16 @@ html, body {
                 }
 
                 .explorer-file,
-                .explorer-file-link,
-                .explorer-folder {
+                .explorer-folder,
+                .explorer-item-link {
                     width: 100%;
                 }
 
-                .explorer-file-link {
+                .explorer-item-link {
                     height: 100%;
                 }
 
-                .explorer-file-link-alt {
+                .explorer-item-link-alt {
                     position: absolute;
 
                     right: 0;
@@ -389,19 +389,25 @@ html, body {
                     display: block;
                 }
 
-                .explorer-file-link-alt {
+                .explorer-item-link-alt {
                     background: rgba( 255, 255, 255, 0.3 );
                     z-index: 10;
                 }
 
-                .explorer-file-link:hover,
-                .explorer-file-link-alt:hover {
+                .explorer-item-link:hover,
+                .explorer-item-link-alt:hover {
                     background: #fff !important;
-                    color: #000;
                 }
 
-                .explorer-folder:hover {
-                    background: #641;
+                .explorer-folder > .explorer-item-link-alt {
+                    background: rgba( 255, 255, 255, 0.1 );
+                }
+
+                .explorer-folder > .explorer-item-link:hover {
+                    background: #641 !important;
+                }
+                .explorer-file > .explorer-item-link:hover {
+                    color: #000;
                 }
 
                 .explorer-folder.first {

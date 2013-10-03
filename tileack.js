@@ -444,14 +444,14 @@ var tileack = (function() {
 
                     var fileLinkWrap = el( 'div', 'explorer-file' );
 
-                    var fileLink = newAnchor(name, 'explorer-file-link', function() {
+                    var fileLink = newAnchor(name, 'explorer-item-link', function() {
                         openFile( path );
                     });
 
                     fileLinkWrap.appendChild( fileLink );
 
                     if ( openWithsAlt.hasOwnProperty(getExtension(path)) ) {
-                        var altLink = newAnchor('', 'explorer-file-link-alt', function() {
+                        var altLink = newAnchor('', 'explorer-item-link-alt', function() {
                             runFile( openWithsAlt[getExtension(path)], path );
                         });
 
@@ -475,7 +475,7 @@ var tileack = (function() {
             }
 
             en = new Enumerator(folderObjs.SubFolders);
-            var isFirst = ' first';
+            var isFirst = 'first';
             for (;!en.atEnd(); en.moveNext()) {
                 (function(path) {
                     path += "";
@@ -483,9 +483,17 @@ var tileack = (function() {
                     var parts = path.split("\\");
                     var name = parts[ parts.length-1 ] || path;
 
-                    scroll.appendChild( newAnchor(name, 'explorer-folder' + isFirst, function() {
+                    var folderWrap = el( 'div' , 'explorer-folder', isFirst );
+                    
+                    folderWrap.appendChild( newAnchor(name, 'explorer-item-link', function() {
                         moveExplorer( scroll, path );
                     } ));
+
+                    folderWrap.appendChild( newAnchor('', 'explorer-item-link-alt', function() {
+                        runFile( 'explorer', path );
+                    } ));
+
+                    scroll.appendChild( folderWrap );
 
                     files.push({
                             name: name,
@@ -500,7 +508,7 @@ var tileack = (function() {
 
             updateInfoBar( infoBar, folder );
 
-            scroll.__files = files;
+            scroll.__files  = files;
             scroll.__parent = subFolder;
             scroll.__folder = folder;
 
