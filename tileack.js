@@ -61,12 +61,20 @@ var tileack = (function() {
 
             'sql'   : '#980',
 
+            'vbs'   : '#aa1',
+            'cs'    : '#bb0',
+
             // configs & logs
             
             'vimrc' : '#875FAB',
 
             'conf'  : '#D2691E',
             'log'   : '#800000',
+
+            'gitignore'     : '#611',
+            'gitattributes' : '#611',
+
+            'htaccess'      : '#631',
 
             // executables
             
