@@ -41,6 +41,11 @@ var tileack = (function() {
     }
 
     var extensionColours = {
+            // text
+
+            'txt'   : '#457',
+            'md'    : '#556B2F',
+
             // source codes
             
             'qb'    : '#ff1493',
@@ -52,10 +57,10 @@ var tileack = (function() {
             'js'    : '#00A3DC',
             'jsx'   : '#1190C0',
 
+            'json'  : '#0090C0',
+
             'html'  : '#00A971',
             'hta'   : '#00A971',
-
-            'md'    : '#556B2F',
 
             'css'   : '#dd5e1d',
 
@@ -66,12 +71,14 @@ var tileack = (function() {
 
             // configs & logs
             
-            'vimrc' : '#875FAB',
+            'vimrc'         : '#875FAB',
+            'vsvimrc'       : '#875FAB',
 
-            'conf'  : '#D2691E',
-            'log'   : '#800000',
+            'conf'          : '#D2691E',
+            'log'           : '#900000',
 
             'gitignore'     : '#611',
+            'gitconfig'     : '#611',
             'gitattributes' : '#611',
 
             'htaccess'      : '#631',
