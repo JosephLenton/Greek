@@ -11,6 +11,15 @@ var tileack = (function() {
 
     var DEFAULT_PROJECT_NAME = 'project';
 
+    // when in doubt, open with this!
+    var DEFAULT_APPLICATION = 'explorer';
+
+    /*
+     * When you click 'cmd', this is the application that will be used,
+     * for the command line window.
+     */
+    var DEFAULT_TERMINAL_APPLICATION = 'powershell';
+
     /*
      * Key Codes
      */
@@ -252,7 +261,7 @@ var tileack = (function() {
         if ( ext && openWiths.hasOwnProperty(ext) ) {
             runFile( openWiths[ext], path );
         } else {
-            runFile( 'explorer', path );
+            runFile( DEFAULT_APPLICATION, path );
         }
     }
 
@@ -364,7 +373,7 @@ var tileack = (function() {
         // open the folder in explorer
         controls.appendChild( newAnchor('folder', 'explorer-info-control open-explorer', function() {
             runFile(
-                    'explorer', 
+                    DEFAULT_APPLICATION, 
                     getParent(info, 'explorer-content').querySelector( '.explorer-scroll' ).__folder
             );
         } ));
@@ -372,7 +381,7 @@ var tileack = (function() {
         // open a powershell folder at this location
         controls.appendChild( newAnchor('cmd', 'explorer-info-control open-powershell', function() {
             runFile(
-                    'powershell', 
+                    DEFAULT_TERMINAL_APPLICATION, 
                     getParent(info, 'explorer-content').querySelector( '.explorer-scroll' ).__folder
             );
         } ));
@@ -490,7 +499,7 @@ var tileack = (function() {
                     } ));
 
                     folderWrap.appendChild( newAnchor('', 'explorer-item-link-alt', function() {
-                        runFile( 'explorer', path );
+                        runFile( DEFAULT_APPLICATION, path );
                     } ));
 
                     scroll.appendChild( folderWrap );
@@ -621,7 +630,7 @@ var tileack = (function() {
 
                     if ( found ) {
                         if ( found.isFile ) {
-                            openFile( 'explorer', found.path );
+                            openFile( DEFAULT_APPLICATION, found.path );
                         } else {
                             moveExplorer( content, found.path );
                         }
@@ -989,6 +998,14 @@ var tileack = (function() {
             },
 
             openWith: function( extension, app, altApp ) {
+                if ( arguments.length >= 3 && altApp === null && app ) {
+                    altApp = DEFAULT_APPLICATION;
+                }
+
+                if ( app === null ) {
+                    app = DEFAULT_APPLICATION;
+                }
+
                 // remove the starting dot, if it's there
                 if ( extension.charAt(0) === '.' ) {
                     extension = extension.substring( 1 );
