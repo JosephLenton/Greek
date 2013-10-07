@@ -952,7 +952,7 @@ var greek = (function() {
 
         try {
             if ( FILE_SYSTEM.FileExists(saveFile) ) {
-                file = FILE_SYSTEM.OpenTextFile(saveFile, 1, false);
+                file = FILE_SYSTEM.OpenTextFile(saveFile, 1, false, -1);
             } else {
                 return null;
             }
@@ -976,7 +976,7 @@ var greek = (function() {
     }
 
     function setSaveJSON( data ) {
-        var file = FILE_SYSTEM.CreateTextFile(saveFile, true);
+        var file = FILE_SYSTEM.CreateTextFile(saveFile, true, true);
         file.Write( JSON.stringify(data) );
         file.Close();
     }
