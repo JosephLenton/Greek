@@ -1,12 +1,12 @@
 "use strict";
 
-var tileack = (function() {
+var greek = (function() {
     var FILE_SYSTEM = new ActiveXObject("Scripting.FileSystemObject");
     var WSHELL = new ActiveXObject("WScript.Shell");
     var SHELL = new ActiveXObject("Shell.Application");
     var USER_HOME = WSHELL.ExpandEnvironmentStrings('%USERPROFILE%');
 
-    var saveFile = USER_HOME + "\\" + '.tileack.save.json';
+    var saveFile = USER_HOME + "\\" + '.greek.save.json';
     var defaultLocation = USER_HOME;
 
     var DEFAULT_PROJECT_NAME = 'project';
@@ -19,6 +19,15 @@ var tileack = (function() {
      * for the command line window.
      */
     var DEFAULT_TERMINAL_APPLICATION = 'powershell';
+
+    /**
+     * Values used for building the title, for when it updates.
+     *
+     * Prefix appeares at the start, always.
+     * The seperator appeares if, there is something following the prefix.
+     */
+    var TITLE_PREFIX    = document.title,
+        TITLE_SEPERATOR = ', '      ;
 
     /*
      * Key Codes
@@ -233,6 +242,14 @@ var tileack = (function() {
         }
 
         return div;
+    }
+
+    function setTitle(text) {
+        if ( text ) {
+            document.title = TITLE_PREFIX + TITLE_SEPERATOR + text;
+        } else {
+            document.title = TITLE_PREFIX;
+        }
     }
 
     function getContentParent(content) {
@@ -527,7 +544,7 @@ var tileack = (function() {
         }
     }
 
-    function showExplorer( environment, div, skipSave ) {
+    function showExplorerGroup( environment, div, skipSave ) {
         var groups = environment.querySelectorAll( '.explorer-group' );
 
         if ( currentExplorer !== div ) {
@@ -548,6 +565,12 @@ var tileack = (function() {
             if ( ! skipSave ) {
                 save();
             }
+
+            setTitle( 
+                    getProjectStubName( 
+                            getExplorerGroupProjectStub( div )
+                    )
+            );
         }
     }
 
@@ -722,7 +745,7 @@ var tileack = (function() {
                     true
             );
 
-            showExplorer( environment, explorerGroup );
+            showExplorerGroup( environment, explorerGroup );
         } else {
             var altShowExp = null,
                 onlyShowFirst = false;
@@ -743,14 +766,16 @@ var tileack = (function() {
                     altShowExp = explorerGroup;
                 }
 
-                if ( expData.show ) {
+                if ( expData.show && !onlyShowFirst ) {
                     altShowExp = null;
                     onlyShowFirst = true;
+
+                    setTitle( expData.name );
                 }
             }
 
             if ( altShowExp !== null ) {
-                showExplorer( environment, altShowExp );
+                showExplorerGroup( environment, altShowExp );
             }
         }
 
@@ -813,7 +838,7 @@ var tileack = (function() {
                                 newProjectStub( environment, newExp, DEFAULT_PROJECT_NAME )
                         );
 
-                        showExplorer( environment, newExp );
+                        showExplorerGroup( environment, newExp );
                     }
         });
 
@@ -826,10 +851,26 @@ var tileack = (function() {
         return projectsBar;
     }
 
+    function setExplorerGroupProjectStub( explorerGroup, projectStub ) {
+        explorerGroup.__projectsStub = projectStub;
+    }
+
+    function getExplorerGroupProjectStub( explorerGroup ) {
+        return explorerGroup.__projectsStub;
+    }
+
+    function getProjectStubName( projectStub ) {
+        if ( projectStub ) {
+            return projectStub.querySelector( '.explorer-project-name' ).textContent;
+        } else {
+            return '';
+        }
+    }
+
     function newProjectStub( environment, explorerGroup, name ) {
         var stub = el('div', 'explorer-project', {
                 click: function() {
-                    showExplorer( environment, explorerGroup );
+                    showExplorerGroup( environment, explorerGroup );
                 }
         });
 
@@ -842,6 +883,8 @@ var tileack = (function() {
 
                     if ( r !== null && r !== '' ) {
                         name.textContent = r;
+
+                        setTitle( r );
                         save();
                     }
                 }
@@ -849,23 +892,28 @@ var tileack = (function() {
 
         var deleteStub = el('a', 'explorer-project-button delete', {
                 text: 'del',
-                click: function() {
+                click: function(ev) {
                     if ( environment.querySelectorAll('.explorer-project').length > 1 ) {
                         explorerGroup.parentNode.removeChild( explorerGroup );
                         stub.parentNode.removeChild( stub );
 
                         if ( explorerGroup.className.indexOf(' hide') === -1 ) {
-                            showExplorer( environment, environment.querySelector('.explorer-group') );
+                            var explorerGroups = environment.querySelector('.explorer-group');
+                            showExplorerGroup( environment, explorerGroups[ explorerGroups.length-1 ] );
                         }
 
                         save();
                     }
+
+                    ev.stopPropagation();
                 }
         });
 
         stub.appendChild( name );
         stub.appendChild( rename );
         stub.appendChild( deleteStub );
+
+        setExplorerGroupProjectStub( explorerGroup, stub );
 
         return stub;
     }
@@ -947,7 +995,7 @@ var tileack = (function() {
             },
 
             loadUserJSFile: function() {
-                var userJSFile = USER_HOME + "\\" + "tileack.js";
+                var userJSFile = USER_HOME + "\\" + "greek.js";
 
                 if ( FILE_SYSTEM.FileExists(userJSFile) ) {
                     var script = el('script', {

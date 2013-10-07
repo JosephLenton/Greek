@@ -1,21 +1,21 @@
-# Tileäck
+# ĞяϵϵΚ
 
 I pretty much use Windows Explorer for project management, and it works, but 
 having to work across lots of different sucks. You either have to be moving
 around all the time, or have millions of explorer windows open.
 
-Tileäck is an attempt to solve this problem. Down the left you can have 
+ĞяϵϵΚ is an attempt to solve this problem. Down the left you can have 
 'projects', which are groups of folders. When you select one, all their folders
 are listed across the page.
 
-![example of Tileäck](http://i.imgur.com/vHsk4u6.png);
+![example of ĞяϵϵΚ](http://i.imgur.com/vHsk4u6.png);
 
 This works on Windows only, as it uses the Windows scripting objects for file
 and application access.
 
 ## KeyBoard Commands
 
-The keyboard controls for Tileäck are a tad complicated, but they are built for
+The keyboard controls for ĞяϵϵΚ are a tad complicated, but they are built for
 fast usage. Once you know them, you can navigate and open files quickly.
 
 ### Fast File/Folder opening
@@ -40,12 +40,19 @@ Press up to move to the folder above.
 
 ## Customization
 
-Users scripts can be loaded to customize Tileäck, after it has started up, by
-placing a script named 'tileack.js' into your home folder.
+Users scripts can be loaded to customize ĞяϵϵΚ, after it has started up, by
+placing a script named 'greek.js' into your home folder.
 
-This file is typically placed at: C:\users\&lt;username&gt;\tileack.js
+This file is typically placed at: C:\\users\\&lt;username&gt;\\greek.js
 
-This is loaded, and allows you to hook into Tileäck, for customization. 
+This is loaded, and allows you to hook into ĞяϵϵΚ, for customization. 
+
+## Save File
+
+ĞяϵϵΚ will save your current projects in your home folder,
+in a file called '.greek.save.json'.
+
+This is typically located at: C:\\users\\&lt;username&gt;\\.greek.save.json
 
 ## API
 
@@ -60,7 +67,7 @@ If no default folder is given, then it will use your home directory by default.
 
 ### onOpenFile( app:sting, path:sting )
 
-Is called when Tileäck goes to open a file. If you return false, then the 
+Is called when ĞяϵϵΚ goes to open a file. If you return false, then the 
 default behaviour is skipped.
 
 This is to allow you to do alternative behaviour instead.
