@@ -148,7 +148,7 @@ html, body {
         .explorer-project {
             font-size: 22px;
             color: #aaa;
-            padding: 2px 0 6px 0;
+            padding: 0 0 6px 0;
             position: relative;
         }
         .explorer-project-button,
@@ -173,6 +173,7 @@ html, body {
             }
             .explorer-project-name {
                 cursor: pointer;
+                padding-bottom: 6px;
             }
         .explorer-project.show {
             background: #1a1a1a;
