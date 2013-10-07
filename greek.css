@@ -23,7 +23,8 @@ a:hover {
     text-decoration: none;
 }
 
-html, body {
+html,
+body {
     min-width: 100%;
     max-width: 100%;
     width: 100%;
@@ -34,11 +35,19 @@ html, body {
 
     margin: 0;
     padding: 0;
-    height: 100%;
 
+    position: absolute;
+
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+}
+
+html,
+body,
+.explorer-container {
     background: #222;
-
-    position: relative;
 }
 
 .explorer-environment,
@@ -51,18 +60,17 @@ html, body {
 }
 .explorer-environment {
     left: 0;
+    overflow: hidden;
 }
 
     .explorer-group {
         left: 60px;
 
-        overflow: auto;
+        overflow: hidden;
 
         overflow-x: auto;
         overflow-y: hidden;
         white-space: nowrap;
-
-        vertical-align: top;
     }
     .explorer-group.hide {
         visibility: hidden;
@@ -184,28 +192,18 @@ html, body {
 
     .explorer-add-explorer,
     .explorer-container {
-        vertical-align: top;
         position: relative;
         display: inline-block;
 
         width: 203px;
-        min-height: 100%;
-        height: 100%;
-
-        padding: 38px 0 6px 0;
 
         -moz-box-sizing: border-box;
         box-sizing: border-box;
         margin-right: 2px;
-
-        box-shadow: inset 1px 4px 9px -6px; 
-
-        transition: width 120ms linear;
     }
-    .explorer-container.hide {
-        width: 0;
-    }
+
     .explorer-add-explorer {
+        vertical-align: top;
         text-align: center;
 
         font-size: 170px;
@@ -213,10 +211,25 @@ html, body {
 
         color: #444;
 
-        padding-top: 120px;
+        padding-top: 180px;
     }
     .explorer-add-explorer:hover {
         color: #999;
+    }
+
+    .explorer-container {
+        transform: translateX( 0 );
+        transition: transform 180ms ease-out, z-index 0 linear 180ms;
+
+        height: 100%;
+
+        z-index: 1;
+    }
+    .explorer-container.hide {
+        transition: transform 180ms ease-in, z-index 0 linear 0;
+        transform: translateX( -203px );
+
+        z-index: 0;
     }
         .explorer-text-float {
             position: absolute;
@@ -267,12 +280,10 @@ html, body {
             border-bottom: 1px solid #ddd;
         }
         .explorer-content {
-            position: absolute;
+            position: relative;
 
-            top: 0;
-            bottom: 0;
-            left: 0;
-            right: 0;
+            width: 100%;
+            height: 100%;
         }
             .explorer-info {
                 position: absolute;
@@ -286,6 +297,8 @@ html, body {
                 margin-bottom: 24px;
 
                 background: #333;
+
+                overflow: hidden;
             }
                 .explorer-info-title {
                     margin: 0;
@@ -332,15 +345,10 @@ html, body {
                     }
             .explorer-scroll {
                 position: absolute;
-
                 top: 64px;
+                bottom: 0;
                 left: 0;
                 right: 0;
-
-                min-width: 100%;
-                width: 100%;
-                min-height: 100%;
-                height: 100%;
 
                 overflow: hidden;
                 overflow-x: hidden;

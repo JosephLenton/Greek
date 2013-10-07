@@ -66,12 +66,12 @@ var greek = (function() {
 
             // source codes
             
-            'qb'    : '#ff1493',
-            'rb'    : '#e02366',
+            'qb'    : '#ff0066',
+            'rb'    : '#df0000',
 
             'php'   : '#B22222',
 
-            'ts'    : '#ff0066',
+            'ts'    : '#9900ff',
             'js'    : '#00A3DC',
             'jsx'   : '#1190C0',
 
@@ -414,8 +414,17 @@ var greek = (function() {
             var pNode = getParent( this, 'explorer-container' );
 
             if ( pNode !== null ) {
-                pNode.parentNode.removeChild( pNode );
-                save();
+                pNode.className += ' hide';
+
+                var callback = function() {
+                    if ( pNode.parentNode ) {
+                        pNode.parentNode.removeChild( pNode );
+                        save();
+                    }
+                }
+
+                pNode.addEventListener( 'transitionend', callback );
+                setTimeout( callback, 200 ); // fallback, should end *after* the transition
             }
         } ));
 
