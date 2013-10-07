@@ -111,7 +111,16 @@ var greek = (function() {
             'png'   : '#556b2f',
             'jpg'   : '#808000',
             'jpeg'  : '#808000',
-            'gif'   : '#6b8e23'
+            'gif'   : '#6b8e23',
+
+            'svg'   : '#ff9900',
+
+            // fonts
+
+            'ttf'   : '#dd5522',
+            'otf'   : '#dd5522',
+            'woff'  : '#cc6633',
+            'eot'   : '#cc5511'
     };
 
     var theOneEnvironment = null;
@@ -656,7 +665,7 @@ var greek = (function() {
 
                     if ( found ) {
                         if ( found.isFile ) {
-                            openFile( DEFAULT_APPLICATION, found.path );
+                            openFile( found.path );
                         } else {
                             moveExplorer( content, found.path );
                         }
