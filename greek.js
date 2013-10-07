@@ -565,12 +565,6 @@ var greek = (function() {
             if ( ! skipSave ) {
                 save();
             }
-
-            setTitle( 
-                    getProjectStubName( 
-                            getExplorerGroupProjectStub( div )
-                    )
-            );
         }
     }
 
@@ -737,15 +731,14 @@ var greek = (function() {
 
         if ( saveData === null || saveData.length === 0 ) {
             var explorerGroup = newExplorerGroup( environment, projectsBar, null, true );
+
+            var projectStub = newProjectStub( environment, explorerGroup, DEFAULT_PROJECT_NAME );
+            addProjectsBarStub( projectsBar, projectStub, true );
+
             environment.appendChild( explorerGroup );
 
-            addProjectsBarStub(
-                    projectsBar,
-                    newProjectStub(environment, explorerGroup, DEFAULT_PROJECT_NAME),
-                    true
-            );
-
             showExplorerGroup( environment, explorerGroup );
+            showProjectStub( environment, projectStub );
         } else {
             var altShowExp = null,
                 onlyShowFirst = false;
@@ -753,29 +746,31 @@ var greek = (function() {
             for ( var i = 0; i < saveData.length; i++ ) {
                 var expData = saveData[i];
 
-                var explorerGroup = newExplorerGroup( environment, projectsBar, expData.folders, !onlyShowFirst && expData.show );
+                var showThisOne = !onlyShowFirst && expData.show ;
+
+                var explorerGroup = newExplorerGroup( environment, projectsBar, expData.folders, showThisOne );
                 environment.appendChild( explorerGroup );
-                addProjectsBarStub(
-                        projectsBar,
-                        newProjectStub(environment, explorerGroup, expData.name),
-                        true
-                );
+
+                var projectStub = newProjectStub( environment, explorerGroup, expData.name, showThisOne );
+                addProjectsBarStub( projectsBar, projectStub, true );
 
                 // show the first explorer, or the one marked
                 if ( i === 0 ) {
-                    altShowExp = explorerGroup;
+                    altShowExp = {
+                            explorerGroup: explorerGroup,
+                            projectStub: projectStub
+                    };
                 }
-
-                if ( expData.show && !onlyShowFirst ) {
+   
+                if ( showThisOne ) {
                     altShowExp = null;
                     onlyShowFirst = true;
-
-                    setTitle( expData.name );
                 }
             }
 
             if ( altShowExp !== null ) {
-                showExplorerGroup( environment, altShowExp );
+                showExplorerGroup( environment, altShowExp.explorerGroup );
+                showProjectStub( environment, altShowExp.projectStub );
             }
         }
 
@@ -833,12 +828,11 @@ var greek = (function() {
                         var newExp = newExplorerGroup( environment, projectsBar, null, false );
                         environment.appendChild( newExp, addProject );
 
-                        addProjectsBarStub(
-                                projectsBar, 
-                                newProjectStub( environment, newExp, DEFAULT_PROJECT_NAME )
-                        );
+                        var projectStub = newProjectStub( environment, newExp, DEFAULT_PROJECT_NAME );
+                        addProjectsBarStub( projectsBar, projectStub );
 
                         showExplorerGroup( environment, newExp );
+                        showProjectStub( environment, projectStub );
                     }
         });
 
@@ -851,26 +845,29 @@ var greek = (function() {
         return projectsBar;
     }
 
-    function setExplorerGroupProjectStub( explorerGroup, projectStub ) {
-        explorerGroup.__projectsStub = projectStub;
-    }
-
-    function getExplorerGroupProjectStub( explorerGroup ) {
-        return explorerGroup.__projectsStub;
-    }
-
-    function getProjectStubName( projectStub ) {
+    function showProjectStub( environment, projectStub ) {
         if ( projectStub ) {
-            return projectStub.querySelector( '.explorer-project-name' ).textContent;
+            if ( ! hasClass(projectStub, 'show') ) {
+                var showProject = environment.querySelector('.explorer-project.show');
+
+                if ( showProject ) {
+                    showProject.className = showProject.className.replace( ' show', '' );
+                }
+
+                projectStub.className += ' show';
+            }
+
+            setTitle( projectStub.querySelector( '.explorer-project-name' ).textContent );
         } else {
-            return '';
+            setTitle( '' );
         }
     }
 
-    function newProjectStub( environment, explorerGroup, name ) {
-        var stub = el('div', 'explorer-project', {
+    function newProjectStub( environment, explorerGroup, name, show ) {
+        var stub = el('div', 'explorer-project' + (show ? ' show' : ''), {
                 click: function() {
                     showExplorerGroup( environment, explorerGroup );
+                    showProjectStub( environment, stub );
                 }
         });
 
@@ -895,11 +892,22 @@ var greek = (function() {
                 click: function(ev) {
                     if ( environment.querySelectorAll('.explorer-project').length > 1 ) {
                         explorerGroup.parentNode.removeChild( explorerGroup );
-                        stub.parentNode.removeChild( stub );
 
                         if ( explorerGroup.className.indexOf(' hide') === -1 ) {
-                            var explorerGroups = environment.querySelector('.explorer-group');
-                            showExplorerGroup( environment, explorerGroups[ explorerGroups.length-1 ] );
+                            // find the previous project to select, before this one
+                            var projectStubIndex = -2;
+                            for ( var node = stub.previousSibling; node; node = node.previousSibling ) {
+                                projectStubIndex++;
+                            } 
+
+                            projectStubIndex = Math.max( 0, projectStubIndex );
+
+                            stub.parentNode.removeChild( stub );
+
+                            showExplorerGroup( environment, environment.querySelectorAll('.explorer-group')[ projectStubIndex ] );
+                            showProjectStub( environment, environment.querySelectorAll('.explorer-project')[ projectStubIndex ] );
+                        } else {
+                            stub.parentNode.removeChild( stub );
                         }
 
                         save();
@@ -912,8 +920,6 @@ var greek = (function() {
         stub.appendChild( name );
         stub.appendChild( rename );
         stub.appendChild( deleteStub );
-
-        setExplorerGroupProjectStub( explorerGroup, stub );
 
         return stub;
     }
