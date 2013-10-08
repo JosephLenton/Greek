@@ -881,7 +881,7 @@ var greek = (function() {
         }
     }
 
-    function newProjectStub( environment, explorerGroup, name, show ) {
+    function newProjectStub( environment, explorerGroup, strName, show ) {
         var stub = el('div', 'explorer-project' + (show ? ' show' : ''), {
                 click: function() {
                     showExplorerGroup( environment, explorerGroup );
@@ -889,7 +889,7 @@ var greek = (function() {
                 }
         });
 
-        var name = el('h3', 'explorer-project-name', { text: name });
+        var name = el('h3', 'explorer-project-name', { text: strName });
 
         var rename = el('a', 'explorer-project-button rename', {
                 text: 'rename',
@@ -938,6 +938,10 @@ var greek = (function() {
         stub.appendChild( name );
         stub.appendChild( rename );
         stub.appendChild( deleteStub );
+
+        if ( show ) {
+            setTitle( strName );
+        }
 
         return stub;
     }
