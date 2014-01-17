@@ -34,6 +34,7 @@ var greek = (function() {
      */
 
     var CTRL = 17,
+        ALT  = 18,
         ESCAPE = 27;
 
     var HOME_ROW_LETTERS = newLettersArray( 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\\', '#' );
@@ -208,6 +209,10 @@ var greek = (function() {
      */
     function newExplorerGroup( environment, projectsBar, folders, show ) {
         var div = el('div', 'explorer-group' + (!show ? ' hide' : ''));
+
+        if ( show ) {
+            currentExplorer = div;
+        }
 
         if ( folders === null ) {
             folders = [ 
@@ -692,7 +697,7 @@ var greek = (function() {
         controlsDest.addEventListener( 'keydown', function(ev) {
             var keyCode = ev.keyCode;
 
-            if ( keyCode === CTRL && currentExplorer !== null ) {
+            if ( keyCode === ALT && currentExplorer !== null ) {
                 isCtrlDown = true;
 
                 var explorers = currentExplorer.querySelectorAll('.explorer-container');
@@ -731,7 +736,7 @@ var greek = (function() {
         } );
 
         controlsDest.addEventListener( 'keyup', function(ev) {
-            if ( ev.keyCode === CTRL && currentExplorer !== null ) {
+            if ( ev.keyCode === ALT && currentExplorer !== null ) {
                 removeCommandLetters();
             }
 
