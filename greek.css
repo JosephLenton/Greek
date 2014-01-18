@@ -92,7 +92,7 @@ body,
         width: 180px;
         left: -120px;
 
-        padding: 64px 0 0 0;
+        padding: 36px 0 0 0;
         -moz-box-sizing: border-box;
         box-sizing: border-box;
 
@@ -138,7 +138,7 @@ body,
         .explorer-add-project,
         .explorer-project {
             display: inline-block;
-            padding: 6px 12px;
+            padding: 4px 12px;
 
             -moz-box-sizing: border-box;
             box-sizing: border-box;
@@ -154,34 +154,31 @@ body,
             font-size: 48px;
         }
         .explorer-project {
-            font-size: 22px;
             color: #aaa;
             padding: 0 0 6px 0;
             position: relative;
+            text-align: center;
         }
         .explorer-project-button,
         .explorer-add-project {
             color: #333;
         }
         .explorer-project-button:hover,
-        .explorer-project:hover,
+        .explorer-project-name:hover,
         .explorer-add-project:hover {
             color: #fff;
         }
             .explorer-project-button {
                 font-size: 12px;
-                position: absolute;
                 bottom: 6px;
-            }
-            .explorer-project-button.delete {
-                left: 12px;
-            }
-            .explorer-project-button.rename {
-                left: 50px;
+                padding: 0 6px;
+                margin: 0;
             }
             .explorer-project-name {
+                font-size: 21px;
                 cursor: pointer;
-                padding-bottom: 6px;
+                padding: 6px 0 0 0;
+                margin: 0;
             }
         .explorer-project.show {
             background: #1a1a1a;
@@ -250,8 +247,6 @@ body,
             font-weight: 900;
 
             font-size: 18px;
-
-            box-shadow: 2px 2px 8px rgba( 0, 0, 0, 0.2 );
         }
         .explorer-text-float.text-file,
         .explorer-text-float.text-letter {
