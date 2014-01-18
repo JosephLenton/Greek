@@ -23,6 +23,8 @@ fast usage. Once you know them, you can navigate and open files quickly.
 The keys along the home row, a through l all representing different explorer 
 panes.
 
+Hold shift and ...
+
  * a - select first pane
  * s - select second pane
  * d - select third pane

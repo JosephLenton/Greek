@@ -33,7 +33,8 @@ var greek = (function() {
      * Key Codes
      */
 
-    var CTRL = 17,
+    var SHIFT = 16,
+        CTRL = 17,
         ALT  = 18,
         ESCAPE = 27;
 
@@ -697,7 +698,7 @@ var greek = (function() {
         controlsDest.addEventListener( 'keydown', function(ev) {
             var keyCode = ev.keyCode;
 
-            if ( keyCode === ALT && currentExplorer !== null ) {
+            if ( ev.shiftKey && currentExplorer !== null ) {
                 isCtrlDown = true;
 
                 var explorers = currentExplorer.querySelectorAll('.explorer-container');
@@ -736,7 +737,7 @@ var greek = (function() {
         } );
 
         controlsDest.addEventListener( 'keyup', function(ev) {
-            if ( ev.keyCode === ALT && currentExplorer !== null ) {
+            if ( ev.keyCode === SHIFT && currentExplorer !== null ) {
                 removeCommandLetters();
             }
 
@@ -913,7 +914,7 @@ var greek = (function() {
         var deleteStub = el('a', 'explorer-project-button delete', {
                 text: 'del',
                 click: function(ev) {
-                    if ( environment.querySelectorAll('.explorer-project').length > 1 ) {
+                    if ( confirm("are you sure?") && environment.querySelectorAll('.explorer-project').length > 1 ) {
                         explorerGroup.parentNode.removeChild( explorerGroup );
 
                         if ( explorerGroup.className.indexOf(' hide') === -1 ) {
