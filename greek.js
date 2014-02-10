@@ -35,33 +35,13 @@ var greek = (function() {
      * Key Codes
      */
 
-    var F12 = 123,
-        SHIFT = 16,
-        CTRL = 17,
-        ALT  = 18,
-        ESCAPE = 27;
+    var F12     = 123   ,
+        SHIFT   = 16    ,
+        CTRL    = 17    ,
+        ALT     = 18    ,
+        ESCAPE  = 27    ;
 
-    var HOME_ROW_LETTERS = newLettersArray( 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\\', '#' );
-
-    function newLettersArray() {
-        var letters = [];
-        var charIndexes = {};
-
-        for ( var i = 0; i < arguments.length; i++ ) {
-            var arg = arguments[i];
-
-            var code = arg.charCodeAt(0);
-
-            letters[i] = arg;
-            charIndexes[arg] = i;
-        }
-
-        letters.charIndex = function(chr) {
-            return charIndexes[chr];
-        }
-
-        return letters;
-    }
+    var HOME_ROW_LETTERS = [ 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\\', '#' ];
 
     var extensionColours = {
             // text
@@ -129,7 +109,6 @@ var greek = (function() {
     };
 
     var theOneEnvironment = null;
-    var isProjectsOpen = true;
 
     var openWiths = {};
     var openWithsAlt = {};
@@ -161,25 +140,7 @@ var greek = (function() {
      * @param callback the callback to call.
      */
     var showConfirm = function( title, text, callback ) {
-        if ( arguments.length === 2 ) {
-            text = title;
-            callback = text;
-            title = null;
-        }
-
-        var oldTitle;
-        if ( title ) {
-            oldTitle = document.title;
-            document.title = title;
-        }
-
-        if ( confirm(text) ) {
-            callback();
-        }
-
-        if ( title ) {
-            document.title = oldTitle;
-        }
+        overlay.showConfirm( title, text, callback );
     }
 
     /**
@@ -198,8 +159,7 @@ var greek = (function() {
      * @return An empty string if no extension found, otherwise the extension.
      */
     var getExtension = function( name ) {
-        var parts = name.split('.');
-        var extension = parts[parts.length-1];
+        var extension = name.lastSplit('.');
 
         if ( extension.indexOf('\\') !== -1 || extension.indexOf('/') !== -1 ) {
             return '';
@@ -300,9 +260,7 @@ var greek = (function() {
         }
 
         if ( animateIn ) {
-            setTimeout( function() {
-                div.className = div.className.replace( ' hide', '' );
-            }, 1);
+            bb.removeClass.later( div, 'hide' );
         }
 
         return div;
@@ -350,20 +308,11 @@ var greek = (function() {
         SHELL.ShellExecute( app, args, "", "open", 1 );
     }
 
-    var hasClass = function( node, className ) {
-        var klass = node.className;
-        
-        return klass === className ||
-                klass.indexOf(      className + ' ') === 0 ||
-                klass.indexOf(' ' + className      ) === (klass.length - (className.length + 1)) ||
-                klass.indexOf(' ' + className + ' ') !== -1 ;
-    }
-
     var getParent = function( child, className ) {
         var pNode = child.parentNode;
 
         while ( pNode !== null ) {
-            if ( hasClass(pNode, className) ) {
+            if ( bb.hasClass(pNode, className) ) {
                 return pNode;
             } else {
                 pNode = pNode.parentNode;
@@ -492,7 +441,7 @@ var greek = (function() {
 
     var moveExplorer = function( content, folderPath, noSave ) {
         var scroll, infoBar;
-        if ( hasClass(content, 'explorer-scroll') ) {
+        if ( bb.hasClass(content, 'explorer-scroll') ) {
             scroll = content;
             content = getParent(scroll, 'explorer-content');
         } else {
@@ -523,7 +472,7 @@ var greek = (function() {
                 (function(path) {
                     path += "";
 
-                    var name = path.split( "\\" ).last() || path;
+                    var name = path.lastSplit( "\\" ) || path;
 
                     var fileLinkWrap = bb( 'div.explorer-file', {
                             style: {
@@ -553,14 +502,13 @@ var greek = (function() {
                 })(en.item());
             }
 
-            en = new Enumerator(folderObjs.SubFolders);
+            en = new Enumerator( folderObjs.SubFolders );
             var isFirst = 'first';
             for (;!en.atEnd(); en.moveNext()) {
                 (function(path) {
                     path += "";
 
-                    var parts = path.split("\\");
-                    var name = parts[ parts.length-1 ] || path;
+                    var name = path.lastSplit("\\") || path;
 
                     scroll.appendChild( bb( 'div.explorer-folder', isFirst, {
                         'a.explorer-item-link': {
@@ -620,7 +568,7 @@ var greek = (function() {
         }
     }
 
-    var newEnvironment = function( controlsDest, saveData, isProjectsOpen ) {
+    var newEnvironment = function( controlsDest, saveData ) {
         var isCtrlDown = false;
 
         var removeCommandLetters = function() {
@@ -710,11 +658,8 @@ var greek = (function() {
                     }
             });
 
-            setTimeout(function() {
-                input.focus();
-            }, 1);
-
             content.appendChild( input );
+            input.callLater( 'focus' );
         }
 
         var hideFileSelect = function() {
@@ -726,8 +671,6 @@ var greek = (function() {
         }
 
         controlsDest.addEventListener( 'keydown', function(ev) {
-            var keyCode = ev.keyCode;
-
             if ( ev.shiftKey && currentExplorer !== null ) {
                 isCtrlDown = true;
 
@@ -749,7 +692,7 @@ var greek = (function() {
                     i++;
                 }
             } else if ( isCtrlDown ) {
-                var index = HOME_ROW_LETTERS.charIndex( ev.key );
+                var index = HOME_ROW_LETTERS.indexOf( ev.key );
 
                 if ( index !== undefined ) {
                     var explorer = currentExplorer.querySelectorAll( '.explorer-container' )[index];
@@ -775,15 +718,19 @@ var greek = (function() {
             }
         } );
 
+        controlsDest.addEventListener( 'click', function(ev) {
+            var pane = environment.querySelector( '.explorer-project-delete-pane.show' )
+
+            if ( pane ) {
+                pane.classList.remove( 'show' );
+            }
+        });
+
         if ( currentExplorer !== null ) {
             currentExplorer.parentNode.removeChild( currentExplorer );
         }
 
         var environment = bb('div', 'explorer-environment');
-
-        if ( isProjectsOpen ) {
-            openProjectsBar( environment );
-        }
 
         var projectsBar = newProjectsBar(environment);
 
@@ -848,40 +795,16 @@ var greek = (function() {
         }
     }
 
-    var openProjectsBar = function( environment ) {
-        if ( environment.className.indexOf(' show-projects') === -1 ) {
-            environment.className += ' show-projects';
-        }
-    }
-
-    var closeProjectsBar = function( environment ) {
-        if ( environment.className.indexOf(' show-projects') !== -1 ) {
-            environment.className = environment.className.replace(' show-projects', '');
-        }
-    }
-
-    var toggleProjectsBar = function( environment ) {
-        if ( environment.className.indexOf(' show-projects') === -1 ) {
-            environment.className += ' show-projects';
-        } else {
-            environment.className = environment.className.replace(' show-projects', '');
-        }
-    }
-
     var newProjectsBar = function(environment) {
         return bb('div.explorer-projects', {
-                'a.explorer-projects-open': {
-                        text: '>>',
-                        click: toggleProjectsBar.curry( environment )
-                },
                 'a.explorer-add-project': {
                         text: '+',
                         click: function() {
-                            var newExp = newExplorerGroup( environment, projectsBar, null, false );
-                            environment.appendChild( newExp, addProject );
+                            var newExp = newExplorerGroup( environment, this.parentNode, null, false );
+                            environment.appendChild( newExp, this );
 
                             var projectStub = newProjectStub( environment, newExp, DEFAULT_PROJECT_NAME );
-                            addProjectsBarStub( projectsBar, projectStub );
+                            addProjectsBarStub( this.parentNode, projectStub );
 
                             showExplorerGroup( environment, newExp );
                             showProjectStub( environment, projectStub );
@@ -892,7 +815,7 @@ var greek = (function() {
 
     var showProjectStub = function( environment, projectStub ) {
         if ( projectStub ) {
-            if ( ! hasClass(projectStub, 'show') ) {
+            if ( ! bb.hasClass(projectStub, 'show') ) {
                 var showProject = environment.querySelector('.explorer-project.show');
 
                 if ( showProject ) {
@@ -909,75 +832,92 @@ var greek = (function() {
     }
 
     var newProjectStub = function( environment, explorerGroup, strName, show ) {
-        var stub = bb('div', 'explorer-project' + (show ? ' show' : ''), {
-                click: function() {
-                    showExplorerGroup( environment, explorerGroup );
-                    showProjectStub( environment, stub );
-                }
-        });
-
-        var name = bb('h3.explorer-project-name', {
-            text: strName,
-            click: function(ev) {
-                // todo
-            }
-        });
-
-        var rename = bb('a.explorer-project-button rename', {
-                text: 'rename',
-                click: function() {
-                    showPrompt("set name", name.textContent, function(r) {
-                        if ( r !== null && r !== '' ) {
-                            name.textContent = r;
-
-                            setTitle( r );
-                            save();
-                        }
-                    });
-                }
-        });
-
-        var deleteStub = bb('a', 'explorer-project-button delete', {
-                text: 'del',
-                click: function(ev) {
-                    if ( environment.querySelectorAll('.explorer-project').length > 1 ) {
-                        showConfirm("Delete project?", "are you sure?", function() {
-                            explorerGroup.parentNode.removeChild( explorerGroup );
-
-                            if ( explorerGroup.className.indexOf(' hide') === -1 ) {
-                                // find the previous project to select, before this one
-                                var projectStubIndex = -2;
-                                for ( var node = stub.previousSibling; node; node = node.previousSibling ) {
-                                    projectStubIndex++;
-                                } 
-
-                                projectStubIndex = Math.max( 0, projectStubIndex );
-
-                                stub.parentNode.removeChild( stub );
-
-                                showExplorerGroup( environment, environment.querySelectorAll('.explorer-group')[ projectStubIndex ] );
-                                showProjectStub( environment, environment.querySelectorAll('.explorer-project')[ projectStubIndex ] );
-                            } else {
-                                stub.parentNode.removeChild( stub );
-                            }
-
-                            save();
-                        });
-                    }
-
-                    ev.stopPropagation();
-                }
-        });
-
-        stub.appendChild( name );
-        stub.appendChild( rename );
-        stub.appendChild( deleteStub );
-
         if ( show ) {
             setTitle( strName );
         }
 
-        return stub;
+        return bb( '.explorer-project' + (show ? ' show' : ''), {
+                click: function() {
+                    showExplorerGroup( environment, explorerGroup );
+                    showProjectStub( environment, this );
+                },
+
+                'h3.explorer-project-name': {
+                        text: strName,
+                        click: function(ev) {
+                            // todo
+                        }
+                },
+
+                'text.explorer-project-rename': {
+                        text: 'rename',
+                        click: function() {
+                            showPrompt("set name", name.textContent, function(r) {
+                                if ( r !== null && r !== '' ) {
+                                    name.textContent = r;
+
+                                    setTitle( r );
+                                    save();
+                                }
+                            });
+                        }
+                },
+
+                '.explorer-project-delete-pane': {
+                        'a.explorer-project-delete-button yes': {
+                                text: 'yes',
+                                click: function(ev) {
+                                    if ( environment.querySelectorAll('.explorer-project').length > 1 ) {
+                                        var stub = this.parentNode.parentNode;
+
+                                        explorerGroup.parentNode.removeChild( explorerGroup );
+
+                                        if ( ! explorerGroup.classList.contains('hide') ) {
+                                            // find the previous project to select, before this one
+                                            var projectStubIndex = -1;
+                                            for ( var node = stub.previousSibling; node; node = node.previousSibling ) {
+                                                projectStubIndex++;
+                                            } 
+
+                                            projectStubIndex = Math.max( 0, projectStubIndex );
+
+                                            stub.parentNode.removeChild( stub );
+
+                                            showExplorerGroup( environment, environment.querySelectorAll('.explorer-group')[ projectStubIndex ] );
+                                            showProjectStub( environment, environment.querySelectorAll('.explorer-project')[ projectStubIndex ] );
+                                        } else {
+                                            stub.parentNode.removeChild( stub );
+                                        }
+
+                                        save();
+                                    }
+                                }
+                        },
+
+                        'a.explorer-project-delete-button no': {
+                                text: 'no',
+                                click: function(ev) {
+                                    bb.removeClass( this.parentNode, 'show' );
+                                }
+                        },
+
+                        click: function(ev) {
+                            ev.stopPropagation();
+                        }
+                },
+
+                'a.explorer-project-delete': {
+                        text: 'x',
+                        click: function(ev) {
+                            bb.addClass(
+                                    this.parentNode.querySelector( '.explorer-project-delete-pane' ),
+                                    'show'
+                            );
+
+                            ev.stopPropagation();
+                        }
+                }
+        });
     }
 
     var save = function() {
@@ -1001,7 +941,7 @@ var greek = (function() {
                 saveGroups.push({
                         name: name,
                         folders: folders,
-                        show: ! hasClass( explorerGroup, 'hide' )
+                        show: ! bb.hasClass( explorerGroup, 'hide' )
                 });
             }
 
@@ -1070,26 +1010,6 @@ var greek = (function() {
                 return this;
             },
 
-            openProjectsBar: function() {
-                if ( theOneEnvironment === null ) {
-                    isProjectsOpen = true;
-                } else {
-                    openProjectsBar( theOneEnvrionment );
-                }
-
-                return this;
-            },
-
-            closeProjectsBar: function() {
-                if ( theOneEnvironment === null ) {
-                    isProjectsOpen = false;
-                } else {
-                    closeProjectsBar( theOneEnvrionment );
-                }
-
-                return this;
-            },
-
             setSaveFile: function( location ) {
                 saveFile = location;
 
@@ -1099,7 +1019,7 @@ var greek = (function() {
             start: function() {
                 // start her up!
                 window.onload = function() {
-                    theOneEnvironment = newEnvironment( window, getSaveJSON(), isProjectsOpen )
+                    theOneEnvironment = newEnvironment( window, getSaveJSON() )
 
                     document.body.appendChild( theOneEnvironment );
                     
@@ -1124,6 +1044,7 @@ var greek = (function() {
                             return disableKeyEvents(ev);
                         }
                     }, true);
+
                     document.body.addEventListener('keyup', function(ev) {
                         if ( ev.keyCode === F12 ) {
                             helpInfo.hide();
@@ -1135,6 +1056,15 @@ var greek = (function() {
                             return disableKeyEvents(ev);
                         }
                     }, true);
+
+                    document.body.addEventListener( 'keydown', function(ev) {
+                        if ( ev.keyCode === 112 ) {
+                            ev.preventDefault();
+                            showConfirm( 'this is a test', 'test text', function() {
+                                // todo
+                            });
+                        }
+                    });
                 };
 
                 return this;

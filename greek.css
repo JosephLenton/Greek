@@ -4,6 +4,11 @@ html, body, div, p, a, li, ul, span, input {
     font-weight: 400;
 }
 
+.explorer-project,
+.explorer-info-title {
+    font-family: "Segoe UI Light", Helvetica;
+}
+
 html, body, div, p, a, li, ul, span {
     color: #fff;
 }
@@ -65,7 +70,7 @@ body,
 }
 
     .explorer-group {
-        left: 60px;
+        left: 160px;
 
         overflow: hidden;
 
@@ -77,23 +82,11 @@ body,
         visibility: hidden;
     }
 
-    .explorer-group,
-    .explorer-projects {
-        transition: left 200ms linear;
-    }
-    .explorer-environment.show-projects > .explorer-group {
-        left: 160px;
-    }
-    .explorer-environment.show-projects > .explorer-projects {
-        left: 0;
-    }
-
     .explorer-projects {
         background: #111;
         width: 160px;
-        left: -120px;
+        left: 0;
 
-        padding: 36px 0 0 0;
         -moz-box-sizing: border-box;
         box-sizing: border-box;
 
@@ -130,57 +123,30 @@ body,
             color: #fff;
             border-color: #fff;
         }
-        .explorer-environment.show-projects > .explorer-projects > .explorer-projects-open {
-            -webkit-transform: rotate( 180deg );
-            -moz-transform: rotate( 180deg );
-            transform: rotate( 180deg );
-        }
 
         .explorer-add-project,
         .explorer-project {
             display: inline-block;
-            padding: 4px 12px;
+            padding: 5px 0;
 
             -moz-box-sizing: border-box;
             box-sizing: border-box;
 
             text-align: center;
-            vertical-align: right;
+            vertical-align: middle;
 
             width: 100%;
             max-width: 100%;
         }
-        .explorer-add-project {
-            text-align: center;
-            font-size: 48px;
-        }
         .explorer-project {
             color: #aaa;
-            padding: 0 0 6px 0;
             position: relative;
             text-align: center;
+            overflow: hidden;
         }
-        .explorer-project-button,
-        .explorer-add-project {
-            color: #333;
+        .explorer-project:hover {
+            background: #161616;
         }
-        .explorer-project-button:hover,
-        .explorer-project-name:hover,
-        .explorer-add-project:hover {
-            color: #fff;
-        }
-            .explorer-project-button {
-                font-size: 12px;
-                bottom: 6px;
-                padding: 0 6px;
-                margin: 0;
-            }
-            .explorer-project-name {
-                font-size: 21px;
-                cursor: pointer;
-                padding: 6px 0 0 0;
-                margin: 0;
-            }
         .explorer-project.show {
             background: #1a1a1a;
         }
@@ -188,6 +154,89 @@ body,
                 color: white;
             }
 
+            .explorer-project-delete {
+                position: absolute;
+                font-size: 32px;
+
+                top: -18px;
+                right: -12px;
+                transform: rotate( 9deg );
+
+                width: 36px;
+                line-height: 36px;
+                text-transform: capitalize;
+
+                border: 3px solid #1f1f1f;
+                color: #1f1f1f;
+                border-radius: 100000px;
+            }
+            .explorer-project.show > .explorer-project-delete {
+                border-color: #333;
+                color: #333;
+            }
+            .explorer-project.show > .explorer-project-delete:hover,
+            .explorer-project-delete:hover {
+                border-color: #fff;
+                color: #fff;
+            }
+            .explorer-project-rename {
+                display: none;
+            }
+            .explorer-project-name {
+                font-size: 21px;
+                cursor: pointer;
+                padding: 6px 0 8px 0;
+                margin: 0;
+            }
+
+        .explorer-add-project {
+            text-align: center;
+            font-size: 48px;
+            color: #333;
+        }
+        .explorer-project-name:hover,
+        .explorer-add-project:hover {
+            color: #fff;
+        }
+
+        .explorer-project-delete-pane {
+            position: absolute;
+
+            top: 0;
+            left: 0;
+
+            width: 100%;
+            height: 100%;
+
+            transition: transform 100ms 0 linear;
+            transform: translateY( 100% );
+
+            background: rgba( 20, 20, 20, 0.75 );
+
+            text-align: center;
+        }
+        .explorer-project-delete-pane.show {
+            transform: translateY( 0 );
+        }
+            .explorer-project-delete-button {
+                display: inline-block;
+
+                background: #a62222;
+                color: white;
+
+                font-weight: 900;
+                text-align: center;
+
+                margin: 13px 10px 0 10px;
+                padding: 2px 0 4px 0;
+                border-radius: 1px;
+
+                min-width: 40px;
+            }
+            .explorer-project-delete-button:hover {
+                background: #cc3636;
+            }
+        
     .explorer-add-explorer,
     .explorer-container {
         position: relative;
@@ -308,12 +357,13 @@ body,
                     bottom: 0;
 
                     font-size: 21px;
+                    z-index: 10;
                 }
                 .explorer-info-close {
                     position: absolute;
                     font-size: 48px;
                     right: -20px;
-                    top: -20px;
+                    top: -28px;
 
                     padding: 0;
                     margin: 0;
@@ -329,6 +379,7 @@ body,
                     border-radius: 10000px;
 
                     text-transform: capitalize;
+                    transform: rotate( 9deg );
 
                     color: #444;
                 }
