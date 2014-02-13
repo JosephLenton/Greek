@@ -2528,13 +2528,13 @@ This is a mix of call, and later.
 
 ### function.later
 
-Sets this function to be called later.
-If a timeout is given, then that is how long it
-will wait for.
+Sets this function to be called later.  If a timeout is given, then that is how
+long it will wait for.
 
 If no timeout is given, it defaults to 0.
 
-Cancelling the timeout can be done using 'clearTimeout'.
+It returns the value used when creating the timeout, and this allows you to
+cancel the timeout using 'clearTimeout'.
 
 @param target Optional, a target object to bind this function to.
 @param timeout Optional, the timeout to wait before calling this function, defaults to 0.
@@ -2549,6 +2549,7 @@ Cancelling the timeout can be done using 'clearTimeout'.
             if ( arguments.length === 0 ) {
                 timeout = 0;
             } else if ( ! (typeof timeout === 'number') ) {
+                // here the timeout is the target
                 fun = fun.bind( timeout );
 
                 if ( arguments.length > 1 ) {
@@ -6011,6 +6012,7 @@ in a callback method.
 
     var setOn = function( events, dom, name, fun, useCapture ) {
         assert( dom, "null or undefined dom given", dom );
+        useCapture = !! useCapture ;
 
         if ( name instanceof Array ) {
             for ( var i = 0; i < name.length; i++ ) {
@@ -6556,9 +6558,9 @@ in a callback method.
             } else {
                 bb.style( dom, val );
             }
-        } else if ( k === 'text' ) {
+        } else if ( k === 'text' || k === 'textContent' ) {
             bb.textOne( dom, val );
-        } else if ( k === 'html' || k === 'innerHTML' || k === 'innerHtml' || k === 'innerhtml' ) {
+        } else if ( k === 'html' || k === 'innerHTML' || k === 'innerHtml' ) {
             bb.htmlOne( dom, val );
         } else if ( k === 'value' ) {
             if ( val === undefined || val === null ) {
@@ -6612,10 +6614,18 @@ in a callback method.
 
         /* Arribute */
         } else {
+            if ( k === 'tabIndex' ) {
+                alert( 'tab index' );
+            }
             assertLiteral( val, "setting an object to a DOM attribute (probably a bug)," + k, k, val )
             dom.setAttribute( k, val );
         }
     }
+
+
+
+ /* -------------------------------------------------------------------------------
+------------------------------------------------------------------------------- */
 
     var attrObj = function(bb, bbGun, dom, obj, isApply) {
         var hasHTMLText = false;
@@ -6634,6 +6644,105 @@ in a callback method.
             }
         }
     }
+
+
+
+ /* -------------------------------------------------------------------------------
+
+### setText dom:Element text:string
+
+Sets the given string, to the dom element given. This is set to it's 
+textContent if it is a standard HTMLElement, and to it's value if it is a
+HTMLInput.
+
+@param dom The Element to set the text to.
+@param text A string of the text being set.
+@return The given dom, for function chaining of elements.
+
+------------------------------------------------------------------------------- */
+
+        var setText = function( dom, text ) {
+            if ( dom instanceof HTMLInputElement ) {
+                dom.value = text;
+            } else {
+                dom.textContent = text;
+            }
+
+            return dom;
+        }
+
+
+
+ /* -------------------------------------------------------------------------------
+
+### combineStringOne text:array|string
+
+If an array is given, then the array is joined, and the result is returned. If
+the given value is a string, then this is just returned.
+
+Anything else will cause an error to be raised.
+
+This exists as a function for unifying strings and arrays of strings, as one.
+
+@param text The text to combine.
+@return Either the array of strings combined, or if given a string, it will 
+  just be returned.
+
+------------------------------------------------------------------------------- */
+
+        var combineStringOne = function(text) {
+            if ( text instanceof Array ) {
+                return combineStringArray( text, 0 );
+            } else if ( isString(text) ) {
+                return text;
+            } else {
+                fail( "non-string given for text content", text );
+            }
+        }
+
+
+
+ /* -------------------------------------------------------------------------------
+
+### combineStringArray args:array startI:int
+
+Given an array, and it should be an array, it will combine it's elements into
+one string. The array *must* contain either strings, or arrays of strings, and
+nothing else.
+
+The 'startI' is optional, and states where to start joining string from in the
+`args` array. So if it's 0, it will start from the first element, and 1 will
+start joining from the second element onwards.
+
+@param args An array of strings (or arrays of strings), to combine.
+@param startI Optional, where to start joining elements from in the array.
+@return All of the args combined into a single string.
+
+------------------------------------------------------------------------------- */
+
+        var combineStringArray = function( args, startI ) {
+            if ( startI === undefined ) {
+                startI = 0;
+            }
+
+            var argsLen = args.length;
+
+            if ( startI > argsLen ) {
+                fail( "start index is greater than the array length" );
+            } else if ( startI === argsLen ) {
+                return '';
+            } else {
+                var allText = combineStringOne( args[startI++] );
+
+                while( startI++ < argsLen ) {
+                    allText += combineStringOne( args[startI] );
+                }
+
+                return allText;
+            }
+        }
+
+
 
  /* ===============================================================================
 
@@ -6750,8 +6859,7 @@ Clones the bb module, giving you a fresh copy.
                 normalizeEventName: function( name ) {
                     return name.
                             toLowerCase().
-                            replace( /^webkit/, '' ).
-                            replace( /^moz/, '' );
+                            replace( /^(webkit|moz|ms)/, '' );
                 },
 
                 isEvent: function( name ) {
@@ -6894,16 +7002,23 @@ These events include:
             return dom;
         }
 
+
+
+ /* -------------------------------------------------------------------------------
+------------------------------------------------------------------------------- */
+
         bb.once = function( dom, name, fun, useCapture ) {
             var self = this;
 
             var funWrap = function() {
-                self.unregister( dom, name, funWrap );
+                self.unregister( dom, name, funWrap, useCapture );
                 return fun.apply( this, arguments );
             }
 
             return this.on( don, name, funWrap, useCapture );
         }
+
+
 
  /* -------------------------------------------------------------------------------
 
@@ -7106,7 +7221,15 @@ What makes this special is that it also hooks into the provided names, such as
         }
 
         bb.hasClass = function( dom, klass ) {
-            return dom.classList.contains( klass );
+            if ( dom.classList !== undefined ) {
+                return dom.classList.contains( klass );
+            } else {
+                var className = dom.className;
+                return klass === className ||
+                        className.indexOf(      klass + ' ') === 0 ||
+                        className.indexOf(' ' + klass      ) === (className.length - (klass.length + 1)) ||
+                        className.indexOf(' ' + klass + ' ') !== -1 ;
+            }
         } 
 
         bb.hasClassArray = function( dom, klasses, i ) {
@@ -7506,14 +7629,35 @@ Sets the HTML content within this element.
 
 ## bb.text
 
-Sets the text content within this dom,
-to the text values given.
+Sets the text content within this dom, to the text value(s) given.
+
+You can provide a string, multiple strings, or an array of strings, or a mix
+of arrays of strings and strings.
+
+For example
+
+```
+    // all of these examples do exactly the same,
+    // setting "text here" as the text within the dom element
+    bb.text( dom, "text here" );
+    bb.text( dom, "text", " ", "here" );
+    bb.text( dom, ["text", " ", "here"] );
+    bb.text( dom, ["text", "here"].join(" ") );
+    bb.text( dom, ["text", " "], "here" );
+
+If given a HTMLInputElement, then this will set it's value instead of the text
+within it.
+
+@param dom The dom element to set the text of.
+@return The 'dom' element given, so you can chain function calls.
 
 ------------------------------------------------------------------------------- */
 
         bb.text = function( dom ) {
-            return this.textArray( dom, arguments, 1 );
+            return setText( dom, combineStringArray(arguments, 1) );
         }
+
+
 
  /* -------------------------------------------------------------------------------
 
@@ -7522,16 +7666,10 @@ to the text values given.
 ------------------------------------------------------------------------------- */
 
         bb.textOne = function( dom, text ) {
-            if ( text instanceof Array ) {
-                this.textArray( dom, text, 0 );
-            } else if ( isString(text) ) {
-                dom.textContent = text;
-            } else {
-                fail( "non-string given for text content", text );
-            }
-
-            return dom;
+            return setText( dom, combineStringOne(text) );
         }
+
+
 
  /* -------------------------------------------------------------------------------
 
@@ -7540,16 +7678,10 @@ to the text values given.
 ------------------------------------------------------------------------------- */
 
         bb.textArray = function( dom, args, startI ) {
-            if ( startI === undefined ) {
-                startI = 0;
-            }
-
-            for ( var i = startI; i < args.length; i++ ) {
-                this.textOne( dom, args[i] );
-            }
-
-            return dom;
+            return setText( dom, combineStringArray(args, startI) );
         }
+
+
 
  /* -------------------------------------------------------------------------------
 
