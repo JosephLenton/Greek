@@ -36,6 +36,7 @@ var greek = (function() {
      */
 
     var F12     = 123   ,
+        ENTER   = 13    ,
         SHIFT   = 16    ,
         CTRL    = 17    ,
         ALT     = 18    ,
@@ -329,7 +330,7 @@ var greek = (function() {
                 // close this folder
                 'a.explorer-info-close': {
                     text: 'x',
-                    click: function() {
+                    click: function(ev) {
                         var pNode = getParent( this, 'explorer-container' );
 
                         if ( pNode !== null ) {
@@ -345,6 +346,8 @@ var greek = (function() {
                             pNode.addEventListener( 'transitionend', callback );
                             setTimeout( callback, 200 ); // fallback, should end *after* the transition
                         }
+
+                        ev.stopPropagation();
                     }
                 },
 
@@ -831,9 +834,41 @@ var greek = (function() {
         }
     }
 
+    var deleteProjectStub = function( environment, projectStub, explorerGroup ) {
+        if ( environment.querySelectorAll('.explorer-project').length > 1 ) {
+            explorerGroup.parentNode.removeChild( explorerGroup );
+
+            if ( ! explorerGroup.classList.contains('hide') ) {
+                // find the previous project to select, before this one
+                var projectStubIndex = -1;
+                for ( var node = projectStub.previousSibling; node; node = node.previousSibling ) {
+                    projectStubIndex++;
+                } 
+
+                projectStubIndex = Math.max( 0, projectStubIndex );
+
+                projectStub.parentNode.removeChild( projectStub );
+
+                showExplorerGroup( environment, environment.querySelectorAll('.explorer-group')[ projectStubIndex ] );
+                showProjectStub( environment, environment.querySelectorAll('.explorer-project')[ projectStubIndex ] );
+            } else {
+                projectStub.parentNode.removeChild( projectStub );
+            }
+
+            save();
+        }
+    }
+
     var newProjectStub = function( environment, explorerGroup, strName, show ) {
         if ( show ) {
             setTitle( strName );
+        }
+
+        var endEditing = function(ev) {
+            this.parentNode.querySelector( '.explorer-project-name' ).textContent = this.value;
+            this.classList.remove( 'show' );
+
+            save();
         }
 
         return bb( '.explorer-project' + (show ? ' show' : ''), {
@@ -842,55 +877,34 @@ var greek = (function() {
                     showProjectStub( environment, this );
                 },
 
-                'h3.explorer-project-name': {
+                'text.explorer-project-name': {
                         text: strName,
-                        click: function(ev) {
-                            // todo
-                        }
-                },
 
-                'text.explorer-project-rename': {
-                        text: 'rename',
-                        click: function() {
-                            showPrompt("set name", name.textContent, function(r) {
-                                if ( r !== null && r !== '' ) {
-                                    name.textContent = r;
+                        keypress: function(ev) {
+                            if ( ev.keyCode === ENTER ) {
+                                ev.preventDefault();
 
-                                    setTitle( r );
-                                    save();
-                                }
-                            });
+                                this.blur();
+                            }
+                        },
+
+                        blur: function() {
+                            // save on change
+                            if ( this.value !== strName ) {
+                                strName = this.value;
+
+                                save();
+                            }
                         }
                 },
 
                 '.explorer-project-delete-pane': {
+                        stopPropagation: 'click',
+
                         'a.explorer-project-delete-button yes': {
                                 text: 'yes',
                                 click: function(ev) {
-                                    if ( environment.querySelectorAll('.explorer-project').length > 1 ) {
-                                        var stub = this.parentNode.parentNode;
-
-                                        explorerGroup.parentNode.removeChild( explorerGroup );
-
-                                        if ( ! explorerGroup.classList.contains('hide') ) {
-                                            // find the previous project to select, before this one
-                                            var projectStubIndex = -1;
-                                            for ( var node = stub.previousSibling; node; node = node.previousSibling ) {
-                                                projectStubIndex++;
-                                            } 
-
-                                            projectStubIndex = Math.max( 0, projectStubIndex );
-
-                                            stub.parentNode.removeChild( stub );
-
-                                            showExplorerGroup( environment, environment.querySelectorAll('.explorer-group')[ projectStubIndex ] );
-                                            showProjectStub( environment, environment.querySelectorAll('.explorer-project')[ projectStubIndex ] );
-                                        } else {
-                                            stub.parentNode.removeChild( stub );
-                                        }
-
-                                        save();
-                                    }
+                                    deleteProjectStub( environment, this.parentNode.parentNode, explorerGroup );
                                 }
                         },
 
@@ -899,15 +913,12 @@ var greek = (function() {
                                 click: function(ev) {
                                     bb.removeClass( this.parentNode, 'show' );
                                 }
-                        },
-
-                        click: function(ev) {
-                            ev.stopPropagation();
                         }
                 },
 
                 'a.explorer-project-delete': {
                         text: 'x',
+                        tabindex: -1,
                         click: function(ev) {
                             bb.addClass(
                                     this.parentNode.querySelector( '.explorer-project-delete-pane' ),
@@ -928,7 +939,7 @@ var greek = (function() {
         if ( explorerGroups.length !== 0 && projectNames.length !== 0 ) {
             for ( var i = 0; i < explorerGroups.length; i++ ) {
                 var explorerGroup = explorerGroups[i];
-                var name = projectNames[i].textContent;
+                var name = projectNames[i].value;
 
                 var folders = [];
 
@@ -978,9 +989,21 @@ var greek = (function() {
     }
 
     var setSaveJSON = function( data ) {
-        var file = FILE_SYSTEM.CreateTextFile(saveFile, true, true);
-        file.Write( JSON.stringify(data) );
-        file.Close();
+        try { 
+            var file = FILE_SYSTEM.CreateTextFile(saveFile, true, true);
+            file.Write( JSON.stringify(data) );
+            file.Close();
+        } catch ( ex ) {
+            // in case it was an issue with writing
+            // just try to ensure it's closed, if we can
+            if ( file ) {
+                try {
+                    file.Close();
+                } catch ( ex ) { }
+            }
+
+            alert( "failed to save to, " + saveFile );
+        }
     }
 
     return {
@@ -1010,8 +1033,8 @@ var greek = (function() {
                 return this;
             },
 
-            setSaveFile: function( location ) {
-                saveFile = location;
+            setSaveFile: function( path ) {
+                saveFile = path;
 
                 return this;
             },
