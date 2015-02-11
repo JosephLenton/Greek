@@ -1,15 +1,16 @@
 "use strict";
 
-var greek = (function() {
-    var greekCore = window.greekCore = window.greekCore || {};
+(function() {
+    var c4 = window.c4 || (window.c4 = {});
+    c4.core || ( c4.core = {} )
 
     var FILE_SYSTEM = new ActiveXObject("Scripting.FileSystemObject");
     var WSHELL = new ActiveXObject("WScript.Shell");
     var SHELL = new ActiveXObject("Shell.Application");
     var USER_HOME = WSHELL.ExpandEnvironmentStrings('%USERPROFILE%');
 
-    var saveFile = USER_HOME + "\\" + '.greek.save.json';
-    var defaultLocation = USER_HOME;
+    var saveFile = USER_HOME + "\\" + '.c4.save.json';
+    var defaultFolder = USER_HOME;
 
     var DEFAULT_PROJECT_NAME = 'project';
 
@@ -35,20 +36,15 @@ var greek = (function() {
      * Key Codes
      */
 
-    var F12     = 123   ,
-        ENTER   = 13    ,
-        SHIFT   = 16    ,
-        CTRL    = 17    ,
-        ALT     = 18    ,
-        ESCAPE  = 27    ;
-
-    var HOME_ROW_LETTERS = [ 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', ';', '\\', '#' ];
+    var PROJECT_SELECT_LETTERS = '1234567890'.split('');
+    var FOLDER_SELECT_LETTERS = 'wertyuiop[]'.split('');
+    var FILE_LETTERS = 'asdfghjkl;\'#'.split('');
 
     var extensionColours = {
             // text
 
             'txt'   : '#457',
-            'md'    : '#556B2F',
+            'md'    : '#446F20',
 
             // source codes
             
@@ -59,7 +55,7 @@ var greek = (function() {
 
             'ts'    : '#9900ff',
             'js'    : '#00A3DC',
-            'jsx'   : '#1190C0',
+            'jsx'   : '#1F8FCF',
 
             'json'  : '#0090C0',
 
@@ -109,12 +105,15 @@ var greek = (function() {
             'eot'   : '#cc5511'
     };
 
-    var theOneEnvironment = null;
+    var fileNameColours = {
+            'makefile' : '#740'
+    };
 
     var openWiths = {};
     var openWithsAlt = {};
 
-    var currentExplorer = null;
+    var currentProject = null;
+    var lastProject = null;
 
     /**
      * Displays a prompt, asking for the user to enter a value.
@@ -169,8 +168,10 @@ var greek = (function() {
         }
     }
 
-    var getExtensionColour = function(name) {
-        return extensionColours[getExtension(name)];
+    var getFileColour = function(name) {
+        return fileNameColours[ name ] ||
+                extensionColours[ getExtension(name) ] ||
+                '' ;
     }
 
     var getParts = function(str, seperator, index, len) {
@@ -202,66 +203,86 @@ var greek = (function() {
         return r;
     }
 
-    var newAddExplorer = function() {
-        return bb('a.explorer-add-explorer', {
-            text: '+',
-            click: function() {
-                this.parentNode.insertBefore( newExplorer(defaultLocation, true), this );
-                save();
-            }
-        })
+    var newDefaultProject = function() {
+        return {
+            name    : DEFAULT_PROJECT_NAME,
+            show    : false,
+            folders : [
+                    {
+                            folder: defaultFolder,
+                            isSelected: true
+                    },
+                    {
+                            folder: defaultFolder,
+                            isSelected: false
+                    },
+                    {
+                            folder: defaultFolder,
+                            isSelected: false
+                    }
+            ]
+        };
     }
 
     /**
-     * @params paths:string[] An array of paths to use for the starting explorer panes.
+     * @params folders An array of folders to use for the starting explorer panes.
      * @return HTMLElement An element containing a group of explorer panes.
      */
-    var newExplorerGroup = function( environment, projectsBar, folders, show ) {
-        var div = bb('.explorer-group');
+    var newExplorerGroup = function( environment, projectsBar, folders, isShow ) {
+        assertArray( folders, "No folders provided for new explorer group" );
+        assert( folders.length > 0, "Empty folders provided for explorer group" );
 
-        if ( show ) {
-            currentExplorer = div;
-        } else {
-            div.className += ' hide';
-        }
+        var explorerGroup = bb( '.explorer-group',
+                ( isShow ? '' : 'c4-hide' ),
 
-        if ( folders === null ) {
-            folders = [ 
-                    defaultLocation,
-                    defaultLocation,
-                    defaultLocation,
-                    defaultLocation,
-                    defaultLocation
-            ];
-        }
+                folders.map( newExplorer ),
 
-        for ( var i = 0; i < folders.length; i++ ) {
-            div.appendChild( newExplorer(folders[i]) );
-        }
+                bb('a.explorer-add-explorer', {
+                        text: '+',
 
-        div.appendChild( newAddExplorer() );
+                        click: function() {
+                            var lastExplorer = explorerGroup.querySelector(
+                                    '.explorer-container:last-of-type > .explorer-content > .explorer-scroll' );
 
-        return div;
+                            var path = lastExplorer ?
+                                    lastExplorer.__folder :
+                                    defaultFolder;
+
+                            this.parentNode.insertBefore(
+                                    newExplorer({ folder:path }, true ),
+                                    this );
+
+                            save();
+                        }
+                })
+        );
+
+        return explorerGroup;
     }
 
-    var newExplorer = function(defaultUrl, animateIn) {
+    var newExplorer = function(folder, animateIn) {
         var scroll = bb('.explorer-scroll');
 
         var div = bb({
-                className: 'explorer-container' + ( animateIn ? ' hide' : '' ),
+                className: {
+                    'explorer-container': true,
+
+                    'c4-hide': animateIn,
+                    'c4-selected': folder.isSelected
+                },
 
                 '.explorer-content': [
                         scroll,
-                        newInfoBar( scroll, defaultUrl )
+                        newInfoBar( scroll, folder.folder )
                 ]
         });
 
-        if ( defaultUrl ) {
-            moveExplorer( scroll, defaultUrl, true );
+        if ( folder.folder ) {
+            moveExplorer( scroll, folder.folder, true );
         }
 
         if ( animateIn ) {
-            bb.removeClass.later( div, 'hide' );
+            bb.removeClass.future( div, 'c4-hide' );
         }
 
         return div;
@@ -269,9 +290,10 @@ var greek = (function() {
 
     var setTitle = function(text) {
         if ( text ) {
-            document.title = TITLE_PREFIX + TITLE_SEPERATOR + text;
+            //document.title = TITLE_PREFIX + TITLE_SEPERATOR + text;
+            document.title = text;
         } else {
-            document.title = TITLE_PREFIX;
+            document.title = ':: ' + TITLE_PREFIX + ' ::';
         }
     }
 
@@ -291,6 +313,10 @@ var greek = (function() {
         }
     }
 
+    var commandLineSafeString = function( path ) {
+        return path.replace(/ /g, "\\ ");
+    }
+
     var openFile = function( path ) {
         var ext = getExtension( path );
 
@@ -302,11 +328,15 @@ var greek = (function() {
     }
 
     var runFile = function( app, path ) {
-        run( app, path.replace(/ /g, "\\ ") );
+        run( app, commandLineSafeString(path) ) ;
     }
 
-    var run = function( app, args ) {
-        SHELL.ShellExecute( app, args, "", "open", 1 );
+    var run = function( app, args, workingDir ) {
+        if ( ! workingDir ) {
+            workingDir = "";
+        }
+
+        SHELL.ShellExecute( app, args, workingDir, "open", 1 );
     }
 
     var getParent = function( child, className ) {
@@ -328,13 +358,13 @@ var greek = (function() {
                 'h2.explorer-info-title': { },
                 
                 // close this folder
-                'a.explorer-info-close': {
+                'a.explorer-info-delete': {
                     text: 'x',
                     click: function(ev) {
                         var pNode = getParent( this, 'explorer-container' );
 
                         if ( pNode !== null ) {
-                            pNode.className += ' hide';
+                            pNode.className += ' c4-hide';
 
                             var callback = function() {
                                 if ( pNode.parentNode ) {
@@ -402,11 +432,13 @@ var greek = (function() {
                     'a.explorer-info-control open-powershell': {
                             text: 'cmd',
                             click: function() {
-                                runFile( DEFAULT_TERMINAL_APPLICATION, 
-                                    getParent(info, 'explorer-content').
+                                var path = getParent( info, 'explorer-content' ).
                                             querySelector( '.explorer-scroll' ).
-                                            __folder
-                                )
+                                            __folder;
+
+                                run( DEFAULT_TERMINAL_APPLICATION,
+                                        "-NoExit",
+                                        path );
                             }
                     },
                     
@@ -429,8 +461,7 @@ var greek = (function() {
     }
 
     var updateInfoBar = function( info, folder ) {
-        info.querySelector('.explorer-info-title').textContent = 
-                getParts( folder, "\\", -3, 2 );
+        info.querySelector('.explorer-info-title').textContent = getParts( folder, "\\", -3, 2 );
     }
 
     /**
@@ -468,7 +499,7 @@ var greek = (function() {
 
             var parts = folder.split("\\");
             parts.splice( parts.length-2, 2 );
-            var subFolder = parts.join( "\\" ) + "\\";
+            var parentFolder = parts.join( "\\" ) + "\\";
 
             en = new Enumerator(folderObjs.Files);
             for (;!en.atEnd(); en.moveNext()) {
@@ -479,7 +510,7 @@ var greek = (function() {
 
                     var fileLinkWrap = bb( 'div.explorer-file', {
                             style: {
-                                background: getExtensionColour( name ) || ''
+                                background: getFileColour( name )
                             },
 
                             'a.explorer-item-link': {
@@ -505,6 +536,8 @@ var greek = (function() {
                 })(en.item());
             }
 
+            
+
             en = new Enumerator( folderObjs.SubFolders );
             var isFirst = 'first';
             for (;!en.atEnd(); en.moveNext()) {
@@ -516,11 +549,11 @@ var greek = (function() {
                     scroll.appendChild( bb( 'div.explorer-folder', isFirst, {
                         'a.explorer-item-link': {
                             text: name,
-                            click: moveExplorer.curry( scroll, path )
+                            click: runFile.curry( DEFAULT_APPLICATION, path )
                         },
 
                         'a.explorer-item-link-alt': {
-                            click: runFile.curry( DEFAULT_APPLICATION, path )
+                            click: moveExplorer.curry( scroll, path )
                         }
                     }) );
 
@@ -530,7 +563,7 @@ var greek = (function() {
                             isFile: false,
                             isFolder: true
                     });
-                })(en.item());
+                })( en.item() );
 
                 isFirst = '';
             }
@@ -538,7 +571,7 @@ var greek = (function() {
             updateInfoBar( infoBar, folder );
 
             scroll.__files  = files;
-            scroll.__parent = subFolder;
+            scroll.__parent = parentFolder;
             scroll.__folder = folder;
 
             if ( ! noSave ) {
@@ -550,236 +583,161 @@ var greek = (function() {
     var showExplorerGroup = function( environment, div, skipSave ) {
         var groups = environment.querySelectorAll( '.explorer-group' );
 
-        if ( currentExplorer !== div ) {
-            var oldExplorer = currentExplorer;
-            currentExplorer = null;
+        for ( var i = 0; i < groups.length; i++ ) {
+            var group = groups[i];
+            bb.toggleClass( group, group !== div, "c4-hide" );
+        }
 
-            for ( var i = 0; i < groups.length; i++ ) {
-                var group = groups[i];
-
-                if ( group === div ) {
-                    group.className = group.className.replace(' hide', '');
-                    currentExplorer = div;
-                } else if ( group.className.indexOf(' hide') === -1 ) {
-                    group.className += ' hide';
-                }
-            }
-
-            if ( ! skipSave ) {
-                save();
-            }
+        if ( ! skipSave ) {
+            save();
         }
     }
 
     var newEnvironment = function( controlsDest, saveData ) {
-        var isCtrlDown = false;
+        assertArray( saveData, "No default data provided for the environment to be setup" );
+        assert( saveData.length > 0, "Empty save data provided" );
 
-        var removeCommandLetters = function() {
-            var downs = currentExplorer.querySelectorAll('.explorer-text-float.text-letter');
+        var nonInputFunction = function(callback) {
+            return function(ev) {
+                if ( ! (ev.target instanceof HTMLInputElement) ) {
+                    var current = environment.querySelector('.explorer-project.c4-show')
 
-            for ( var i = 0; i < downs.length; i++ ) {
-                var down = downs[i];
-                down.parentNode.removeChild( down );
-            }
+                    if ( current ) {
+                        ev.preventDefault();
 
-            isCtrlDown = false;
-        }
-
-        var showFileSelect = function( content ) {
-            var files = getContentFilesAndFolders( content );
-            var subFolder = getContentParent( content );
-
-            var input = bb('text.explorer-text-float.text-file', {
-                    'keydown': function(ev) {
-                        if ( ev.key === 'Up' ) {
-                            if ( subFolder ) {
-                                moveExplorer( content, subFolder );
-                            }
-
-                            hideFileSelect();
-                        } else if ( ev.key === 'Enter' ) {
-                            var text = input.value.toLowerCase();
-
-                            for ( var i = 0; i < files.length; i++ ) {
-                                var file = files[i];
-                                var index = file.name.toLowerCase().indexOf(text);
-
-                                if ( index === 0 && file.name.length === text.length ) {
-                                    if ( file.isFile ) {
-                                        openFile( file.path );
-                                    } else {
-                                        moveExplorer( content, file.path );
-                                    }
-
-                                    hideFileSelect();
-                                }
-                            }
-                        }
-                    },
-
-                    'input': function(ev) {
-                        var text = input.value.toLowerCase();
-
-                        if ( text.length > 0 ) {
-                            // used for full matches from the start of a file
-                            var found = undefined,
-                            // used for partial matches, from the middle of a file
-                                maybe = undefined;
-
-                            for ( var i = 0; i < files.length; i++ ) {
-                                var index = files[i].name.toLowerCase().indexOf(text);
-
-                                if ( index === 0 ) {
-                                    if ( found ) {
-                                        return;
-                                    } else {
-                                        found = files[i];
-                                    }
-                                } else if ( index !== -1 ) {
-                                    if ( maybe === undefined ) {
-                                        maybe = files[i];
-                                    } else {
-                                        maybe = null;
-                                    }
-                                }
-                            }
-
-                            if ( ! found && maybe ) {
-                                found = maybe;
-                            }
-
-                            if ( found ) {
-                                if ( found.isFile ) {
-                                    openFile( found.path );
-                                } else {
-                                    moveExplorer( content, found.path );
-                                }
-
-                                hideFileSelect();
-                            }
-                        }
+                        return callback( ev, current );
                     }
-            });
-
-            content.appendChild( input );
-            input.callLater( 'focus' );
-        }
-
-        var hideFileSelect = function() {
-            var inputs = document.querySelectorAll( '.explorer-text-float.text-file' );
-
-            for ( var i = 0; i < inputs.length; i++ ) {
-                inputs[i].parentNode.removeChild( inputs[i] );
-            }
-        }
-
-        controlsDest.addEventListener( 'keydown', function(ev) {
-            if ( ev.shiftKey && currentExplorer !== null ) {
-                isCtrlDown = true;
-
-                var explorers = currentExplorer.querySelectorAll('.explorer-container');
-                var i = 0;
-
-                for ( var k in HOME_ROW_LETTERS ) {
-                    if ( i >= explorers.length ) {
-                        break;
-                    } else {
-                        explorers[i].appendChild(
-                                bb('text.explorer-text-float.text-letter', { 
-                                        text: HOME_ROW_LETTERS[k],
-                                        size: 1
-                                })
-                        );
-                    }
-
-                    i++;
-                }
-            } else if ( isCtrlDown ) {
-                var index = HOME_ROW_LETTERS.indexOf( ev.key );
-
-                if ( index !== undefined ) {
-                    var explorer = currentExplorer.querySelectorAll( '.explorer-container' )[index];
-
-                    if ( explorer ) {
-                        removeCommandLetters();
-
-                        showFileSelect( explorer );
-                    }
-
-                    ev.preventDefault();
                 }
             }
-        } );
+        }
 
-        controlsDest.addEventListener( 'keyup', function(ev) {
-            if ( ev.keyCode === SHIFT && currentExplorer !== null ) {
-                removeCommandLetters();
-            }
+        // Add the keyboard hotkeys for keys 1 to 0 along the top row for 
+        // selecting a project.
+        var projectSelectKeys = {};
+        PROJECT_SELECT_LETTERS.map( function(key, i) {
+            projectSelectKeys[key] = (function(i) {
+                return nonInputFunction(function(ev, current) {
+                    var next = current.parentNode.querySelector(
+                            '.explorer-project:nth-of-type(' + (i+1) + ')' );
 
-            if ( ev.keyCode === ESCAPE ) {
-                hideFileSelect();
-            }
-        } );
+                    if ( next ) {
+                        showProject( environment, next );
+                    }
+                });
+            })(i);
+        });
 
-        controlsDest.addEventListener( 'click', function(ev) {
-            var pane = environment.querySelector( '.explorer-project-delete-pane.show' )
+        bb.on( controlsDest, {
+                'keyup escape': function(ev) {
+                    // todo, cancel the current control stack
+                },
 
-            if ( pane ) {
-                pane.classList.remove( 'show' );
+                'keypress': [ 
+                        projectSelectKeys, 
+                        {
+                            'q': nonInputFunction(function(ev, current) {
+                                showProject( environment, lastProject );
+                                // todo 
+                            }),
+                            
+                            'backspace': nonInputFunction(function(ev, current) {
+                                // todo delete project
+                            }),
+                            
+                            // rename project
+                            'enter': nonInputFunction(function(ev, current) {
+                                var input = current.querySelector( '.explorer-project-name' );
+                                input.focus();
+                                input.value = input.value;
+                            }),
+
+                            // previous project
+                            '-': nonInputFunction(function(ev, current) {
+                                showProject( environment, bb.previousWrap(current, '.explorer-project') );
+                            }),
+
+                            // next project
+                            '+': nonInputFunction(function(ev, current) {
+                                showProject( environment, bb.nextWrap(current, '.explorer-project') );
+                            })
+                        },
+
+                        {
+                            // open command line for currently selected folder
+                            'n': nonInputFunction(function(ev, current) {
+                                // todo
+                            }),
+
+                            // open command line in first folder
+                            'm': nonInputFunction(function(ev, current) {
+                                var folder = current.__explorerGroup.querySelector(
+                                        '.explorer-container:first-of-type > .explorer-content > .explorer-scroll' );
+
+                                if ( folder ) {
+                                    run( DEFAULT_TERMINAL_APPLICATION,
+                                            "-NoExit",
+                                            folder.__folder );
+                                }
+                            })
+                        }
+                ]
+        });
+
+        bb.on( controlsDest, ['click', 'keypress'], function(ev) {
+            var target = ev.target;
+
+            if ( 
+                    !  target.classList.contains( 'explorer-project-delete-pane' ) &&
+                    ! (target.parentNode !== null && target.parentNode.classList.contains('explorer-project-delete-pane'))
+            ) {
+                var pane = environment.querySelector( '.explorer-project-delete-pane.c4-show' )
+
+                if ( pane ) {
+                    pane.classList.remove( 'c4-show' );
+                }
             }
         });
 
-        if ( currentExplorer !== null ) {
+        if ( currentProject !== null ) {
+            var currentExplorer = currentProject.__explorerGroup;
             currentExplorer.parentNode.removeChild( currentExplorer );
+            currentProject = null;
         }
 
         var environment = bb('div', 'explorer-environment');
 
-        var projectsBar = newProjectsBar(environment);
+        var projectsBar = newProjectsBar( environment );
 
-        if ( saveData === null || saveData.length === 0 ) {
-            var explorerGroup = newExplorerGroup( environment, projectsBar, null, true );
+        var altShowExp = null,
+            onlyShowFirst = false;
 
-            var projectStub = newProjectStub( environment, explorerGroup, DEFAULT_PROJECT_NAME );
-            addProjectsBarStub( projectsBar, projectStub, true );
+        for ( var i = 0; i < saveData.length; i++ ) {
+            var expData = saveData[i];
 
+            var showThisOne = !onlyShowFirst && expData.show ;
+
+            var explorerGroup = newExplorerGroup( environment, projectsBar, expData.folders, showThisOne );
             environment.appendChild( explorerGroup );
 
-            showExplorerGroup( environment, explorerGroup );
-            showProjectStub( environment, projectStub );
-        } else {
-            var altShowExp = null,
-                onlyShowFirst = false;
+            var projectStub = newProjectStub( environment, explorerGroup, expData.name, showThisOne );
+            addProjectsBarStub( projectsBar, projectStub, true );
 
-            for ( var i = 0; i < saveData.length; i++ ) {
-                var expData = saveData[i];
-
-                var showThisOne = !onlyShowFirst && expData.show ;
-
-                var explorerGroup = newExplorerGroup( environment, projectsBar, expData.folders, showThisOne );
-                environment.appendChild( explorerGroup );
-
-                var projectStub = newProjectStub( environment, explorerGroup, expData.name, showThisOne );
-                addProjectsBarStub( projectsBar, projectStub, true );
-
-                // show the first explorer, or the one marked
-                if ( i === 0 ) {
-                    altShowExp = {
-                            explorerGroup: explorerGroup,
-                            projectStub: projectStub
-                    };
-                }
-   
-                if ( showThisOne ) {
-                    altShowExp = null;
-                    onlyShowFirst = true;
-                }
+            // show the first explorer, or the one marked
+            if ( i === 0 ) {
+                altShowExp = {
+                        explorerGroup: explorerGroup,
+                        projectStub: projectStub
+                };
             }
 
-            if ( altShowExp !== null ) {
-                showExplorerGroup( environment, altShowExp.explorerGroup );
-                showProjectStub( environment, altShowExp.projectStub );
+            if ( showThisOne ) {
+                altShowExp = null;
+                onlyShowFirst = true;
             }
+        }
+
+        if ( altShowExp !== null ) {
+            showProject( environment, altShowExp.projectStub );
         }
 
         environment.appendChild( projectsBar );
@@ -803,34 +761,57 @@ var greek = (function() {
                 'a.explorer-add-project': {
                         text: '+',
                         click: function() {
-                            var newExp = newExplorerGroup( environment, this.parentNode, null, false );
+                            var project = newDefaultProject();
+
+                            var newExp = newExplorerGroup( environment, this.parentNode, project.folders, false );
                             environment.appendChild( newExp, this );
 
-                            var projectStub = newProjectStub( environment, newExp, DEFAULT_PROJECT_NAME );
+                            var projectStub = newProjectStub( environment, newExp, project.name );
                             addProjectsBarStub( this.parentNode, projectStub );
 
-                            showExplorerGroup( environment, newExp );
-                            showProjectStub( environment, projectStub );
+                            showProject( environment, projectStub );
                         }
                 }
         });
     }
 
+    var showProject = function( environment, projectStub ) {
+        if (
+                projectStub &&
+              ! projectStub.classList.contains('c4-show') &&
+                projectStub !== currentProject 
+        ) {
+            setLastProject( currentProject );
+            currentProject = projectStub;
+
+            showProjectStub( environment, projectStub );
+            showExplorerGroup( environment, projectStub.__explorerGroup );
+        }
+    }
+
+    var setLastProject = function(project) {
+        if ( lastProject === null ) {
+            lastProject = project;
+
+            setLastProject = (function(projectStub) {
+                lastProject = projectStub;
+            }).throttle( 500 );
+        }
+    }
+
     var showProjectStub = function( environment, projectStub ) {
         if ( projectStub ) {
-            if ( ! bb.hasClass(projectStub, 'show') ) {
-                var showProject = environment.querySelector('.explorer-project.show');
+            if ( ! projectStub.classList.contains('c4-show') ) {
+                var currentProject = environment.querySelector('.explorer-project.c4-show');
 
-                if ( showProject ) {
-                    showProject.className = showProject.className.replace( ' show', '' );
+                if ( currentProject ) {
+                    currentProject.classList.remove( 'c4-show' );
                 }
 
-                projectStub.className += ' show';
+                projectStub.classList.add( 'c4-show' );
             }
 
-            setTitle( projectStub.querySelector( '.explorer-project-name' ).textContent );
-        } else {
-            setTitle( '' );
+            setTitle( projectStub.querySelector( '.explorer-project-name' ).value );
         }
     }
 
@@ -838,7 +819,7 @@ var greek = (function() {
         if ( environment.querySelectorAll('.explorer-project').length > 1 ) {
             explorerGroup.parentNode.removeChild( explorerGroup );
 
-            if ( ! explorerGroup.classList.contains('hide') ) {
+            if ( ! explorerGroup.classList.contains('c4-hide') ) {
                 // find the previous project to select, before this one
                 var projectStubIndex = -1;
                 for ( var node = projectStub.previousSibling; node; node = node.previousSibling ) {
@@ -849,8 +830,7 @@ var greek = (function() {
 
                 projectStub.parentNode.removeChild( projectStub );
 
-                showExplorerGroup( environment, environment.querySelectorAll('.explorer-group')[ projectStubIndex ] );
-                showProjectStub( environment, environment.querySelectorAll('.explorer-project')[ projectStubIndex ] );
+                showProject( environment, environment.querySelectorAll('.explorer-project')[ projectStubIndex ] );
             } else {
                 projectStub.parentNode.removeChild( projectStub );
             }
@@ -866,24 +846,27 @@ var greek = (function() {
 
         var endEditing = function(ev) {
             this.parentNode.querySelector( '.explorer-project-name' ).textContent = this.value;
-            this.classList.remove( 'show' );
+            this.classList.remove( 'c4-show' );
 
             save();
         }
 
-        return bb( '.explorer-project' + (show ? ' show' : ''), {
+        var stub = bb( '.explorer-project' + (show ? ' c4-show' : ''), {
                 click: function() {
-                    showExplorerGroup( environment, explorerGroup );
-                    showProjectStub( environment, this );
+                    showProject( environment, this );
                 },
 
                 'text.explorer-project-name': {
                         text: strName,
 
                         keypress: function(ev) {
-                            if ( ev.keyCode === ENTER ) {
+                            if ( ev.keyCode === 13 /* enter */ ) {
                                 ev.preventDefault();
+                                this.blur();
+                            } else if ( ev.keyCode === 27 /* escape */ ) {
+                                this.value = strName;
 
+                                ev.preventDefault();
                                 this.blur();
                             }
                         },
@@ -899,11 +882,20 @@ var greek = (function() {
                 },
 
                 '.explorer-project-delete-pane': {
-                        stopPropagation: 'click',
+                        stopPropagation: [ 'click', 'keypress' ],
+
+                        'keypress': {
+                            escape: function() {
+                                this.classList.remove( 'c4-show' );
+                            }
+                        },
 
                         'a.explorer-project-delete-button yes': {
                                 text: 'yes',
                                 click: function(ev) {
+                                    deleteProjectStub( environment, this.parentNode.parentNode, explorerGroup );
+                                },
+                                'keypress enter': function(ev) {
                                     deleteProjectStub( environment, this.parentNode.parentNode, explorerGroup );
                                 }
                         },
@@ -911,7 +903,7 @@ var greek = (function() {
                         'a.explorer-project-delete-button no': {
                                 text: 'no',
                                 click: function(ev) {
-                                    bb.removeClass( this.parentNode, 'show' );
+                                    this.parentNode.classList.remove( 'c4-show' );
                                 }
                         }
                 },
@@ -922,16 +914,26 @@ var greek = (function() {
                         click: function(ev) {
                             bb.addClass(
                                     this.parentNode.querySelector( '.explorer-project-delete-pane' ),
-                                    'show'
+                                    'c4-show'
                             );
 
                             ev.stopPropagation();
                         }
                 }
         });
+
+        stub.__explorerGroup = explorerGroup;
+
+        return stub;
     }
 
-    var save = function() {
+    
+
+    /// 
+    /// Saving
+    /// 
+    
+    var save = (function() {
         var explorerGroups = document.querySelectorAll('.explorer-group');
         var projectNames = document.querySelectorAll('.explorer-project-name');
         var saveGroups = [];
@@ -946,26 +948,59 @@ var greek = (function() {
                 var contents = explorerGroup.querySelectorAll( '.explorer-scroll' );
 
                 for ( var j = 0; j < contents.length; j++ ) {
-                    folders.push( contents[j].__folder );
+                    var folderDiv = contents[j];
+                    var folder = folderDiv.__folder;
+
+                    folders.push({
+                            folder  : folder,
+                            selected: folderDiv.classList.contains('c4-selected')
+                    });
                 }
 
                 saveGroups.push({
-                        name: name,
-                        folders: folders,
-                        show: ! bb.hasClass( explorerGroup, 'hide' )
+                        name    : name,
+                        folders : folders,
+                        show    : ! bb.hasClass( explorerGroup, 'c4-hide' )
                 });
             }
 
-            setSaveJSON( saveGroups );
+            writeObjToFile( saveFile, saveGroups );
         }
+    }).throttle( 500 );
+
+    var updateSaveDataFormat = function( data ) {
+        if ( data !== null ) {
+            for ( var i = 0; i < data.length; i++ ) {
+                var folderGroup = data[i];
+                var folders = folderGroup.folders;
+
+                for ( var j = 0; j < folders.length; j++ ) {
+                    var folder = folders[j];
+
+                    if ( typeof folder === 'string' ) {
+                        folders[j] = {
+                            folder: folder,
+                            selected: (j === 0)
+                        };
+
+                    // data is laid out right, so we just skip the rest of the work
+                    // and return the data.
+                    } else {
+                        return data;
+                    }
+                }
+            }
+        }
+
+        return data;
     }
 
-    var getSaveJSON = function() {
+    var readObjFromFile = function( path ) {
         var file = null;
 
         try {
-            if ( FILE_SYSTEM.FileExists(saveFile) ) {
-                file = FILE_SYSTEM.OpenTextFile(saveFile, 1, false, -1);
+            if ( FILE_SYSTEM.FileExists(path) ) {
+                file = FILE_SYSTEM.OpenTextFile(path, 1, false, -1);
             } else {
                 return null;
             }
@@ -973,6 +1008,8 @@ var greek = (function() {
             if ( file ) {
                 var data = file.ReadAll();
                 file.Close();
+                file = null;
+
                 return JSON.parse( data );
             } else {
                 return null;
@@ -981,6 +1018,7 @@ var greek = (function() {
             try {
                 if ( file ) {
                     file.Close();
+                    file = null;
                 }
             } catch ( ex ) { }
 
@@ -988,10 +1026,10 @@ var greek = (function() {
         }
     }
 
-    var setSaveJSON = function( data ) {
+    var writeObjToFile = function( path, data ) {
         try { 
-            var file = FILE_SYSTEM.CreateTextFile(saveFile, true, true);
-            file.Write( JSON.stringify(data) );
+            var file = FILE_SYSTEM.CreateTextFile(path, true, true);
+            file.Write( JSON.stringify(data, undefined, 4) );
             file.Close();
         } catch ( ex ) {
             // in case it was an issue with writing
@@ -1002,121 +1040,121 @@ var greek = (function() {
                 } catch ( ex ) { }
             }
 
-            alert( "failed to save to, " + saveFile );
+            alert( "failed to save to, " + path );
         }
     }
 
-    return {
-            addExtensionColor: function( ext, color ) {
-                extensionColours[ getExtension(ext) ] = color;
-            },
 
-            setDefaultFolder: function(path) {
-                if ( FILE_SYSTEM.FolderExists(path) ) {
-                    defaultLocation = path;
-                }
 
-                return this;
-            },
+    /// 
+    ///         Public Interface
+    /// 
+    
+    /**
+     *
+     */
+    c4.extColor = function( ext, color ) {
+        extensionColours[ getExtension(ext) ] = color;
 
-            loadUserJSFile: function() {
-                var userJSFile = USER_HOME + "\\" + ".greek.js";
+        return this;
+    }
 
-                if ( FILE_SYSTEM.FileExists(userJSFile) ) {
-                    var script = bb('script', {
-                        src: userJSFile
-                    } );
+    /**
+     * For when file extensions do not make sense, you can also set a
+     * colour for specific filenames. For example 'makefile'.
+     *
+     * File name colour takes precidence over file extension colour.
+     * So you can also set colours for specific files to be coloured
+     * differently; i.e. for 'index.html', 'site.css', 'stdafx.h', and
+     * so on.
+     *
+     * @param name The name of the file.
+     * @param color The CSS colour value to set.
+     */
+    c4.fileNameColor = function( name, color ) {
+        fileNameColours[ name ] = color;
 
-                    document.getElementsByTagName('head')[0].appendChild( script );
-                }
+        return this;
+    }
 
-                return this;
-            },
+    c4.defaultFolder = function(path) {
+        if ( FILE_SYSTEM.FolderExists(path) ) {
+            defaultFolder = path;
+        }
 
-            setSaveFile: function( path ) {
-                saveFile = path;
+        return this;
+    }
 
-                return this;
-            },
+    c4.loadUserJSFile = function() {
+        var userJSFile = USER_HOME + "\\" + ".c4.js";
 
-            start: function() {
-                // start her up!
-                window.onload = function() {
-                    theOneEnvironment = newEnvironment( window, getSaveJSON() )
+        if ( FILE_SYSTEM.FileExists(userJSFile) ) {
+            var script = bb.script({ src: userJSFile });
 
-                    document.body.appendChild( theOneEnvironment );
-                    
-                    var helpInfo = new window.greekCore.HelpOverlay();
-                    document.body.appendChild( helpInfo.getDom() );
+            document.getElementsByTagName('head')[0].appendChild( script );
+        }
 
-                    var disableKeyEvents = function(ev) {
-                        ev.preventDefault();
-                        ev.stopPropagation();
+        return this;
+    }
 
-                        return false;
-                    }
+    c4.saveFile = function( path ) {
+        if ( arguments.length === 0 ) {
+            return saveFile;
+        } else {
+            saveFile = path;
+            return this;
+        }
+    }
 
-                    document.body.addEventListener('keydown', function(ev) {
-                        if ( ev.keyCode === F12 ) {
-                            helpInfo.show();
+    c4.start = function() {
+        // start her up!
+        window.onload = function() {
+            // load data, normalize the data (in case we made some changes to the format),
+            // or set the data to a default set of data.
+            var saveData = updateSaveDataFormat(
+                    readObjFromFile( saveFile )
+            ) || [ newDefaultProject() ]
+                        
+            var theEnvironment = newEnvironment( window, saveData );
+            document.body.appendChild( theEnvironment );
+            
+            var helpInfo = new c4.core.HelpOverlay();
+            document.body.appendChild( helpInfo.getDom() );
 
-                            document.body.addEventListener('keydown', disableKeyEvents, true);
-                            document.body.addEventListener('keyup', disableKeyEvents, true);
-                            document.body.addEventListener('keypress', disableKeyEvents, true);
+            bb.attr( document.body, {
+                preventDefault: [ 'keypress TAB', 'keydown TAB', 'keyup TAB' ],
 
-                            return disableKeyEvents(ev);
-                        }
-                    }, true);
+                'keydown TAB': helpInfo.method('show'),
+                'keyup   TAB': helpInfo.method('hide')
+            } );
+        };
 
-                    document.body.addEventListener('keyup', function(ev) {
-                        if ( ev.keyCode === F12 ) {
-                            helpInfo.hide();
+        return this;
+    }
 
-                            document.body.removeEventListener('keydown', disableKeyEvents, true);
-                            document.body.removeEventListener('keyup', disableKeyEvents, true);
-                            document.body.removeEventListener('keypress', disableKeyEvents, true);
+    c4.openWith = function( extension, app, altApp ) {
+        if ( arguments.length >= 3 && altApp === null && app ) {
+            altApp = DEFAULT_APPLICATION;
+        }
 
-                            return disableKeyEvents(ev);
-                        }
-                    }, true);
+        if ( app === null ) {
+            app = DEFAULT_APPLICATION;
+        }
 
-                    document.body.addEventListener( 'keydown', function(ev) {
-                        if ( ev.keyCode === 112 ) {
-                            ev.preventDefault();
-                            showConfirm( 'this is a test', 'test text', function() {
-                                // todo
-                            });
-                        }
-                    });
-                };
+        // remove the starting dot, if it's there
+        if ( extension.charAt(0) === '.' ) {
+            extension = extension.substring( 1 );
+        }
 
-                return this;
-            },
+        if ( app ) {
+            openWiths[ extension ] = app;
+        }
 
-            openWith: function( extension, app, altApp ) {
-                if ( arguments.length >= 3 && altApp === null && app ) {
-                    altApp = DEFAULT_APPLICATION;
-                }
+        if ( altApp ) {
+            openWithsAlt[ extension ] = altApp;
+        }
 
-                if ( app === null ) {
-                    app = DEFAULT_APPLICATION;
-                }
-
-                // remove the starting dot, if it's there
-                if ( extension.charAt(0) === '.' ) {
-                    extension = extension.substring( 1 );
-                }
-
-                if ( app ) {
-                    openWiths[ extension ] = app;
-                }
-
-                if ( altApp ) {
-                    openWithsAlt[ extension ] = altApp;
-                }
-
-                return this;
-            }
-    };
+        return this;
+    }
 })();
 

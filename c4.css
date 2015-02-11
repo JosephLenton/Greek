@@ -8,8 +8,6 @@ input::-ms-clear {
     display: none;
 }
 
-.explorer-project,
-.explorer-project input,
 .explorer-info-title {
     font-family: "Segoe UI Light", Helvetica;
 }
@@ -38,6 +36,28 @@ a:hover {
     text-decoration: none;
 }
 
+.explorer-info-delete,
+.explorer-project-delete {
+    text-transform: capitalize;
+    transform: rotate( 9deg );
+    border-width: 3px;
+    border-style: solid;
+    border-radius: 10000px;
+
+    padding: 0;
+    margin: 0;
+    text-align: center;
+
+    border-color: #1F283B;
+    color: #1F283B;
+}
+.explorer-info-delete:hover,
+.explorer-project.c4-show > .explorer-project-delete:hover,
+.explorer-project-delete:hover {
+    border-color: #fff;
+    color: #fff;
+}
+
 html,
 body {
     min-width: 100%;
@@ -62,7 +82,20 @@ body {
 html,
 body,
 .explorer-container {
-    background: #222;
+    background: #131A29;
+}
+
+body {
+  scrollbar-base-color: transparent;
+  scrollbar-3dlight-color: transparent;
+  scrollbar-highlight-color: transparent;
+  scrollbar-dark-shadow-color: transparent;
+
+  scrollbar-track-color : #131A29;
+  scrollbar-shadow-color: #131A29;
+  scrollbar-arrow-color : #131A29;
+
+  scrollbar-face-color  : #1C263B;
 }
 
 .explorer-environment,
@@ -79,6 +112,7 @@ body,
 }
 
     .explorer-group {
+        padding-left: 30px;
         left: 160px;
 
         overflow: hidden;
@@ -87,12 +121,14 @@ body,
         overflow-y: hidden;
         white-space: nowrap;
     }
-    .explorer-group.hide {
+    .explorer-group.c4-hide {
         visibility: hidden;
     }
 
     .explorer-projects {
-        background: #111;
+        background: #1C1F36;
+        background: transparent;
+
         width: 160px;
         left: 0;
 
@@ -127,19 +163,19 @@ body,
             max-width: 100%;
         }
         .explorer-project {
-            color: #aaa;
+            color: #374C75;
             position: relative;
             text-align: center;
             overflow: hidden;
             cursor: pointer;
         }
         .explorer-project:hover {
-            background: #161616;
+            color: #6D8ECF;
         }
-        .explorer-project.show {
-            background: #1a1a1a;
+        .explorer-project.c4-show {
+            color: #fff;
         }
-            .explorer-project.show > .explorer-project-name {
+            .explorer-project.c4-show > .explorer-project-name {
                 color: white;
                 pointer-events: auto;
             }
@@ -150,24 +186,13 @@ body,
 
                 top: -18px;
                 right: -12px;
-                transform: rotate( 9deg );
 
                 width: 36px;
                 line-height: 36px;
-                text-transform: capitalize;
-
-                border: 3px solid #1f1f1f;
-                color: #1f1f1f;
-                border-radius: 100000px;
             }
-            .explorer-project.show > .explorer-project-delete {
-                border-color: #333;
-                color: #333;
-            }
-            .explorer-project.show > .explorer-project-delete:hover,
-            .explorer-project-delete:hover {
-                border-color: #fff;
-                color: #fff;
+            .explorer-project.c4-show > .explorer-project-delete {
+                border-color: #3E5175;
+                color: #3E5175;
             }
             .explorer-project-name {
                 font-size: 21px;
@@ -189,7 +214,7 @@ body,
         .explorer-add-project {
             text-align: center;
             font-size: 48px;
-            color: #333;
+            color: #1C263B;
         }
         .explorer-project-name:hover,
         .explorer-add-project:hover {
@@ -213,7 +238,14 @@ body,
             text-align: center;
             visibility: hidden;
         }
-        .explorer-project-delete-pane.show {
+
+        /*
+         * When you go to delete a project two little buttons popup to confirm.
+         * They ask 'yes' and 'no'. 
+         *
+         * This is the CSS for that section.
+         */
+        .explorer-project-delete-pane.c4-show {
             transition: transform 100ms 0 ease-in, visibility 0 linear 0;
             transform: translateY( 0 );
             visibility: visible;
@@ -221,7 +253,7 @@ body,
             .explorer-project-delete-button {
                 display: inline-block;
 
-                background: #a62222;
+                background: #2222a6;
                 color: white;
 
                 font-weight: 900;
@@ -256,12 +288,12 @@ body,
         font-size: 170px;
         font-weight: 900;
 
-        color: #444;
+        color: #1C263B;
 
         padding-top: 180px;
     }
     .explorer-add-explorer:hover {
-        color: #999;
+        color: #fff;
     }
 
     .explorer-container {
@@ -272,7 +304,7 @@ body,
 
         z-index: 1;
     }
-    .explorer-container.hide {
+    .explorer-container.c4-hide {
         transition: transform 180ms ease-in, z-index 0 linear 0;
         transform: translateX( -203px );
 
@@ -341,8 +373,6 @@ body,
 
                 margin-bottom: 24px;
 
-                background: #333;
-
                 overflow: hidden;
             }
                 .explorer-info-title {
@@ -358,33 +388,14 @@ body,
 
                     font-size: 21px;
                 }
-                .explorer-info-close {
+                .explorer-info-delete {
                     position: absolute;
                     font-size: 48px;
                     right: -20px;
                     top: -28px;
 
-                    padding: 0;
-                    margin: 0;
-                    line-height: auto;
-
-                    text-align: center;
-                    background: transparent;
-
                     width: 50px;
                     line-height: 48px;
-
-                    border: 3px solid #444;
-                    border-radius: 10000px;
-
-                    text-transform: capitalize;
-                    transform: rotate( 9deg );
-
-                    color: #444;
-                }
-                .explorer-info-close:hover {
-                    color: #fff;
-                    border-color: #fff;
                 }
                 .explorer-info-controls {
                     position: absolute;
@@ -425,6 +436,8 @@ body,
                 overflow-y: auto;
 
                 white-space: nowrap;
+            }
+            .explorer-scroll.c4-selected {
             }
                 .explorer-file,
                 .explorer-folder,
@@ -485,22 +498,21 @@ body,
                 }
 
                 .explorer-folder > .explorer-item-link-alt {
-                    background: rgba( 255, 255, 255, 0.1 );
+                    background: #1C263B;
                 }
 
                 .explorer-folder > .explorer-item-link:hover {
-                    background: #641 !important;
+                    background: #235 !important;
                 }
                 .explorer-file > .explorer-item-link:hover {
                     color: #000;
                 }
 
                 .explorer-folder.first {
-                    margin-top: 32px;
-                    border-top: 1px solid #641;
+                    margin-top: 40px;
                 }
 
-.greek-help-overlay {
+.c4-help-overlay {
     position: fixed;
     z-index: 100000;
 
@@ -517,10 +529,11 @@ body,
 
     display: none;
 }
-.greek-help-overlay.show {
+.c4-help-overlay.c4-show {
     display: block;
 }
-    .greek-help-overlay-page {
+    .c4-help-overlay-page {
+        vertical-align: top;
         display: inline-block;
         height: 100%;
         width: 500px;

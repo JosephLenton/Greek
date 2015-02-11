@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 
 <HTA:APPLICATION 
-    ID='ListTxtCmd'
+    ID='c4FileExplorer'
     Scroll='Yes'
     SingleInstance='No'
     SysMenu='Yes'
@@ -14,28 +14,25 @@
 
 	showintaskbar="yes"
 
-    WindowState='Normal'
-    APPLICATIONNAME='Greek'
+    windowState="maximize"
+    APPLICATIONNAME='c4'
 >
 
-<meta charset="ISO-8859-1" /> 
-<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+<meta charset="utf-8"> 
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
 
-<title>&#286;&#x44F;&#x3F5;&#x3F5;&#x39A;</title>
+<title>c4</title>
 
-<link rel="stylesheet" type="text/css" href="./greek.css">
-
-<body></body>
+<link rel="stylesheet" type="text/css" href="./c4.css">
 
 <script type="text/javascript" src="./platform.js" data-autocompile="true"></script>
-<script type="text/jsx" src="./cursor.jsx"></script>
 <script type="text/javascript" src="./help-info.js"></script>
-<script type="text/javascript" src="./greek.js"></script>
+<script type="text/javascript" src="./c4.js"></script>
 
 <script>
-    greek.loadUserJSFile();
+    c4.loadUserJSFile();
 
     // start her up!
-    greek.start();
+    c4.start();
 </script>
 
