@@ -36,6 +36,15 @@ a:hover {
     text-decoration: none;
 }
 
+
+
+/*
+ * The big 'X' delete buttons are invisible by default by show up when you 
+ * hover over that pane.
+ *
+ * When you hover over the button directly it turns bright white.
+ */
+
 .explorer-info-delete,
 .explorer-project-delete {
     text-transform: capitalize;
@@ -48,14 +57,18 @@ a:hover {
     margin: 0;
     text-align: center;
 
-    border-color: #1F283B;
-    color: #1F283B;
+    border-color: transparent;
+    color: transparent;
+}
+.explorer-info:hover > .explorer-info-delete,
+.explorer-project:hover > .explorer-project-delete {
+    border-color: #2F384B;
+    color: #2F384B;
 }
 .explorer-info-delete:hover,
-.explorer-project.c4-show > .explorer-project-delete:hover,
 .explorer-project-delete:hover {
-    border-color: #fff;
-    color: #fff;
+    border-color: #fff !important;
+    color: #fff !important;
 }
 
 html,
@@ -110,9 +123,12 @@ body {
     left: 0;
     overflow: hidden;
 }
+    .explorer-group,
+    .explorer-projects {
+        padding-left: 16px;
+    }
 
     .explorer-group {
-        padding-left: 30px;
         left: 160px;
 
         overflow: hidden;
@@ -126,6 +142,8 @@ body {
     }
 
     .explorer-projects {
+        padding-top: 64px;
+
         background: #1C1F36;
         background: transparent;
 
@@ -190,10 +208,6 @@ body {
                 width: 36px;
                 line-height: 36px;
             }
-            .explorer-project.c4-show > .explorer-project-delete {
-                border-color: #3E5175;
-                color: #3E5175;
-            }
             .explorer-project-name {
                 font-size: 21px;
                 padding: 6px 0 8px 0;
@@ -224,10 +238,10 @@ body {
         .explorer-project-delete-pane {
             position: absolute;
 
-            top: 0;
+            top : 0;
             left: 0;
 
-            width: 100%;
+            width : 100%;
             height: 100%;
 
             transition: transform 100ms 0 ease-out, visibility 0 linear 100ms;
@@ -362,6 +376,9 @@ body {
             width: 100%;
             height: 100%;
         }
+        .explorer-content.c4-folder-not-found {
+            background: #291318;
+        }
             .explorer-info {
                 position: absolute;
 
@@ -430,14 +447,20 @@ body {
                 bottom: 0;
                 left: 0;
                 right: 0;
+                padding-top: 3px;
 
                 overflow: hidden;
                 overflow-x: hidden;
                 overflow-y: auto;
 
                 white-space: nowrap;
+
+                transition: border-color 120ms linear;
+                border-top: 2px solid transparent;
             }
-            .explorer-scroll.c4-selected {
+            .c4-selected > .explorer-content > .explorer-scroll {
+                border-top-color: #5473B5;
+                border-radius: 2px;
             }
                 .explorer-file,
                 .explorer-folder,
@@ -455,7 +478,7 @@ body {
                 }
 
                 .explorer-item-link {
-                    padding: 3px 18px;
+                    padding: 3px 6px;
                     font-size: 18px;
 
                     -moz-box-sizing: border-box;
@@ -472,6 +495,21 @@ body {
 
                 .explorer-item-link {
                     height: 100%;
+                }
+
+                .explorer-file {
+                    background: #333;
+                }
+                .explorer-folder,
+                .explorer-folder > a {
+                    color: #374C75;
+                }
+
+                .explorer-item {
+                    transition: background 100ms linear 0s;
+                }
+                .explorer-item.c4-ping {
+                    background: rgba(245, 180, 15, 0.6) !important;
                 }
 
                 .explorer-item-link-alt {

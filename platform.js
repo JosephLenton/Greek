@@ -4052,6 +4052,38 @@ If you wish to use the underscore for something else, you can use the value
 
 /* -------------------------------------------------------------------------------
 
+### applyToFun
+
+Used to call apply on a function and return it's result. It's needed because
+this actually fails on a whole host of functions; native functions!
+
+The apply will fail because native functions cannot take a non-undefined value
+for the target. They cannot have a target value.
+
+So this will try to call it normally and if that fails call without an object.
+
+------------------------------------------------------------------------------- */
+
+    var applyToFun = function( fun, target, combinedArgs ) {
+        // if no target, native or otherwise
+        if ( target === undefined && target === null ) {
+            return fun.apply( undefined, combinedArgs );
+
+        } else {
+            // calling non-native function with a target
+            try {
+                return fun.apply( target, combinedArgs );
+
+            // calling an native function
+            } catch ( err ) {
+                return fun.apply( undefined, combinedArgs );
+
+            }
+        }
+    }
+
+/* -------------------------------------------------------------------------------
+
 ### newPartial
 
 ------------------------------------------------------------------------------- */
@@ -4143,7 +4175,7 @@ If you wish to use the underscore for something else, you can use the value
                         }
                     }
 
-                    return fun.apply( target, combinedArgs );
+                    return applyToFun( fun, target, combinedArgs );
                 });
     }
 
@@ -6354,6 +6386,25 @@ alternative. It parses and then runs the maths.
         TILDA = 126;
 
 
+
+    /**
+     * Note this doesn't tell you in full if something is numeric because it
+     * also depends on the context of the whole word. 
+     *
+     * For example 'b' will fail with this test, however '0b1111' is numeric.
+     * Only rely on this for checking a single character and not the whole word.
+     *
+     * @return True or False if the code is for an ASCII character between 0 and 9.
+     */
+    var isNumeric = function( code ) {
+        return ( code >= ZERO && code <= NINE ) ;
+    }
+
+
+
+    /**
+     *
+     */
     var isAlphaNumeric = function( code ) {
         return (
             ( code >= LOWER_A && code <= LOWER_Z ) || // lower case letter
@@ -6845,7 +6896,49 @@ alternative. It parses and then runs the maths.
 
                                     k += numString.length;
                                 }
+
+                            // numbers that are actually strings
+                            //  i.e. 100%, 10px
+                            } else if ( isNumeric(l.charCodeAt(k)) ) {
+                                var charI = k+1;
+                                var isString = false;
+
+                                while ( charI < lLen ) {
+                                    var charC = l.charCodeAt( charI++ );
+
+                                    if (
+                                            charC === SPACE ||
+                                            charC === TAB   ||
+                                            charC === SLASH_N ||
+                                            charC === SLASH_R
+                                    ) {
+                                        break;
+
+                                    } else if ( ! isNumeric(charC) ) {
+                                        isString = true;
+
+                                    }
+                                }
+
+                                if ( isString ) {
+                                    var newStr = '"' + l.substring( k+2, charI ) + '"' ;
+                                    l = l.substring( 0, k ) + newStr + l.substring( charI );
+                                    k += newStr.length;
+                                }
+
+                            // for css colours like #aaa
+                            } else if ( c === '#' ) {
+                                var charI = k+1;
+
+                                while ( charI < lLen && isBreakCharCode(l.charCodeAt(charI)) ) {
+                                    charI++
+                                }
+
+                                var newStr = '"' + l.substring( k+2, charI ) + '"' ;
+                                l = l.substring( 0, k ) + newStr + l.substring( charI );
+                                k += newStr.length;
                             }
+
                         }
                     } // for c in line
 
@@ -7692,11 +7785,36 @@ array as a parameter.
         ev.preventDefault();
     }
 
-    var BB_BLANK_DATA = {
-            __isBBDataMapInfo__: true,
-            fun: null,
-            isFunction: false 
+
+/* The blank data is used internally for HTML events. All of the HTML events are
+set to the same BROWSER_PROVIDED_DEFAULT object. */
+
+    var BROWSER_PROVIDED_DEFAULT = {
+            /**
+             * A blank function that does nothing.
+             * 
+             * This is here to avoid 'null', so this value is always not-null 
+             * in all cases.
+             */
+            fun: function() { },
+
+            /**
+             * True when you should call the function set on this object. 
+             * Otherwise false.
+             */
+            isFunction: false,
+
+            /**
+             * Denotes if there is a native version of this provided by thead
+             * browser.
+             * 
+             * Even if this has been wrapped by something custom this should 
+             * still be true.
+             */
+            isBrowserProvided: true
     };
+
+
 
     var listToDataMap = function( arr ) {
         var map = {};
@@ -7705,26 +7823,36 @@ array as a parameter.
             var el = arr[i];
 
             assert( ! map.has(el), "duplicate entry found in list '" + el + "'" );
-            map[ el ] = BB_BLANK_DATA;
+            map[ el ] = BROWSER_PROVIDED_DEFAULT;
         }
 
         return map;
     }
 
-    var newBBFunctionData = function( callback ) {
+
+
+    var newBBFunctionData = function( callback, oldEvent ) {
         if ( 
                 ((typeof callback) === 'function') || 
                 (callback instanceof Function)
         ) {
             return {
-                    __isBBDataMapInfo__: true,
                     fun:  callback,
-                    isFunction: true  
+                    isFunction: true,
+                    isBrowserProvided: (!!oldEvent && oldEvent.isBrowserProvided)
             };
         } else {
             fail( "non-function provided as callback" );
         }
     }
+
+
+
+/* -------------------------------------------------------------------------------
+
+## HTML Elements
+
+------------------------------------------------------------------------------- */
 
     var HTML_ELEMENTS = [
             'a',
@@ -7853,7 +7981,7 @@ All of the HTML events available.
             // this is added manually as a custom event,
             // to deal with prefixes.
             
-            //'transitionend',
+            'transitionend',
             'animationstart',
             'animationend',
             'animationiteration',
@@ -8010,16 +8138,30 @@ in a callback method.
         )
     }
 
-    /**
-     * Helper Methods, before, bb it's self!
-     */
 
-    var setOnObject = function( bb, events, dom, obj, useCapture ) {
+
+/* -------------------------------------------------------------------------------
+
+
+## Helper Methods, before, bb it's self!
+
+
+-------------------------------------------------------------------------------
+
+
+
+-------------------------------------------------------------------------------
+
+### setOnOffObject
+
+------------------------------------------------------------------------------- */
+
+    var setOnOffObject = function( bb, nextSetFun, events, dom, obj, useCapture ) {
         assert( dom, "null or undefined dom given", dom );
 
         for ( var k in obj ) {
             if ( obj.has(k) ) {
-                setOn( bb, events, dom, k, obj[k], useCapture )
+                setOnOff( bb, nextSetFun, events, dom, k, obj[k], useCapture )
             }
         }
     }
@@ -8028,14 +8170,20 @@ in a callback method.
 
 /* -------------------------------------------------------------------------------
 
-## setOn
+## setOnOff
 
-Helper function that does the main crux of setting an event.
+Helper function that does the main crux of setting or removing an event. It
+does checking to ensure the event being set/removed is valid and then calls on
+to the next function.
+
+The next function to call is either to set or remove the event. Which to use is
+passed as a parameter.
 
 Note that 'useCapture' is the same as the 'useCapture' from the DOM's
 'addEventListener' method.
 
 @param bb The bb instance that is being used to set the event.
+@param nextSetFun:() -> void, The next function to call on to to set the event on or off.
 @param events A collection of all events available.
 @param dom The HTML node we are setting the event to.
 @param name The name of the event, or an array of event names.
@@ -8044,18 +8192,18 @@ Note that 'useCapture' is the same as the 'useCapture' from the DOM's
 
 ------------------------------------------------------------------------------- */
 
-    var setOn = function( bb, events, dom, name, fun, useCapture ) {
+    var setOnOff = function( bb, nextSetFun, events, dom, name, fun, useCapture ) {
         assert( dom, "null or undefined dom given", dom );
         assertBoolean( useCapture, "useCapture should be true or false, and it's not" );
 
         if ( name instanceof Array ) {
             for ( var i = 0; i < name.length; i++ ) {
-                setOn( bb, events, dom, name[i], fun, useCapture );
+                setOnOff( bb, nextSetFun, events, dom, name[i], fun, useCapture );
             }
 
         // Has name been trimmed before now? The anser is no!
         } else {
-            assertString( name, "Bad parameters given for setting event on." );
+            assertString( name, "Bad parameters given for setting event on or off." );
 
             var evName = name.trim();
             var evParams;
@@ -8072,8 +8220,7 @@ Note that 'useCapture' is the same as the 'useCapture' from the DOM's
 
             if (
                     evFun !== undefined &&
-                    evFun !== null &&
-                    evFun.__isBBDataMapInfo__ === true 
+                    evFun !== null
             ) {
                 if ( ! evFun.isFunction ) {
                     if ( evParams !== '' ) {
@@ -8086,7 +8233,7 @@ Note that 'useCapture' is the same as the 'useCapture' from the DOM's
                 fail( "unknown event given " + name );
             }
 
-            setOnInner( bb, evFun, dom, evName, evParams, fun, useCapture );
+            nextSetFun( bb, evFun, dom, evName, evParams, fun, useCapture );
         }
     }
 
@@ -8126,6 +8273,36 @@ before this code is called.
 
         }
     }
+
+
+
+/* -------------------------------------------------------------------------------
+
+### setOffInner
+
+------------------------------------------------------------------------------- */
+
+    var setOffInner = function( bb, evFun, dom, evName, evParams, fun, useCapture ) {
+        if ( dom instanceof Array ) {
+            for ( var i = 0; i < dom.length; i++ ) {
+                setOffInner( bb, evFun, dom[i], evName, evParams, fun, useCapture );
+            }
+
+        // isWindow dom = ( dom.self === dom )
+        } else if ( dom.nodeType !== undefined || (dom.self === dom) ) {
+            if ( evFun !== null && ! evFun.isBrowserProvided ) {
+                fail( "Feature not supported: setting off custom events" );
+            }
+
+            dom.removeEventListener( evName, fun, useCapture )
+
+        } else {
+            fail( "Unknown dom node given", dom );
+
+        }
+    }
+
+
 
     var iterateClasses = function( args, i, endI, fun ) {
         for ( ; i < endI; i++ ) {
@@ -8400,6 +8577,78 @@ before this code is called.
             fail( "Unknown value given for 'klass' in toggle" );
             return dom;
         }
+    }
+
+
+
+/* -------------------------------------------------------------------------------
+
+@param startI Where the start iterating from in klass, if klass is an array.
+@param endI Where to end iterating from in klass, if klass is an array.
+
+------------------------------------------------------------------------------- */
+
+    var toggleClassBoolean = function( dom, flag, klass, onAdd, onRemove ) {
+        if ( flag ) {
+            if ( isArray(klass) ) {
+                return addClassArray( dom, klass, 0 );
+            } else {
+                return addClassOne( dom, klass );
+            }
+
+            if ( onAdd !== null ) {
+                onAdd( true );
+            }
+
+        } else {
+            if ( isArray(klass) ) {
+                return removeClassArray( dom, klass, 0 );
+            } else {
+                return removeClassOne( dom, klass );
+            }
+
+            if ( onRemove !== null ) {
+                onRemove( false );
+            } else if ( onAdd !== null ) {
+                onAdd( false );
+            }
+        }
+
+        return dom;
+    }
+
+
+
+/* -------------------------------------------------------------------------------
+
+Takes a boolean flag and an array, and sets all the klasses in the array on or 
+off depending on the flag.
+
+------------------------------------------------------------------------------- */
+
+    var toggleClassBooleanArray = function( dom, flag, args, startI, endI, onAdd, onRemove ) {
+        assert( startI < endI, "no arguments provided" );
+
+        var hasRemove = false;
+        var hasAdd = false;
+
+        if ( flag ) {
+            hasAdd = true;
+
+            iterateClasses( args, startI, endI, function(klass) {
+                dom.classList.add(klass);
+            } );
+        } else {
+            hasRemove = true;
+
+            iterateClasses( args, startI, endI, function(klass) {
+                dom.classList.remove(klass);
+            } );
+        }
+
+        toggleClassCallAddRemove( onAdd, onRemove, hasAdd, hasRemove );
+
+        return dom;
     }
 
 
@@ -8786,10 +9035,10 @@ created.
                 }
 
             } else if ( k === 'stopPropagation' ) {
-                setOn( bb, bb.setup.data.events, dom, val, STOP_PROPAGATION_FUN, false )
+                setOnOff( bb, setOnInner, bb.setup.data.events, dom, val, STOP_PROPAGATION_FUN, false )
 
             } else if ( k === 'preventDefault' ) {
-                setOn( bb, bb.setup.data.events, dom, val, PREVENT_DEFAULT_FUN, false )
+                setOnOff( bb, setOnInner, bb.setup.data.events, dom, val, PREVENT_DEFAULT_FUN, false )
 
             } else if ( k === 'self' || k === 'this' ) {
                 assertFunction( val, "none function given for 'self' attribute" );
@@ -9210,8 +9459,7 @@ adding new custom events which you can use on DOM elements.
 
                     if (
                             ev !== undefined && 
-                            ev !== null && 
-                            ev.__isBBDataMapInfo__ === true 
+                            ev !== null
                     ) {
                         return ev;
                     } else {
@@ -9227,8 +9475,7 @@ adding new custom events which you can use on DOM elements.
 
                     if ( 
                             ev !== undefined && 
-                            ev !== null && 
-                            ev.__isBBDataMapInfo__ === true 
+                            ev !== null
                     ) {
                         return ev;
                     } else {
@@ -9251,7 +9498,7 @@ adding new custom events which you can use on DOM elements.
                 event: newRegisterMethod( 'event', 'eventOne' ),
 
                 eventOne: function( name, fun ) {
-                    this.data.events[ name ] = newBBFunctionData( fun );
+                    this.data.events[ name ] = newBBFunctionData( fun, this.data.events[name] );
                 },
 
                 normalizeEventName: function( name ) {
@@ -9264,16 +9511,14 @@ adding new custom events which you can use on DOM elements.
                     var ev = this.data.events[ name ];
 
                     return ev !== undefined && 
-                           ev !== null && 
-                           ev.__isBBDataMapInfo__ === true ;
+                           ev !== null
                 },
 
                 isElement: function( name ) {
                     var ev = this.data.elements[ name ];
 
                     return ev !== undefined &&
-                           ev !== null && 
-                           ev.__isBBDataMapInfo__ === true ;
+                           ev !== null
                 },
 
                 /**
@@ -9295,16 +9540,11 @@ adding new custom events which you can use on DOM elements.
                 element: newRegisterMethod( 'element', 'elementOne' ),
                 
                 elementOne: function( name, fun ) {
-                    this.data.elements[ name ] = newBBFunctionData( fun );
+                    this.data.elements[ name ] = newBBFunctionData( fun, this.data.elements[name] );
                 }
         }
 
         bb.setup.
-                event( 'transitionend', function(dom, fun) {
-                    dom.addEventListener( 'transitionend', fun );
-                    dom.addEventListener( 'webkitTransitionEnd', fun );
-                } ).
-
                 /**
                  * Anchors will start with a '#' as their href.
                  */
@@ -9405,17 +9645,17 @@ These events include:
             var argsLen = arguments.length;
 
             if ( argsLen === 4 ) {
-                setOn( bb, bb.setup.data.events, dom, name, fun, !! useCapture )
+                setOnOff( bb, setOnInner, bb.setup.data.events, dom, name, fun, !! useCapture )
             } else if ( argsLen === 3 ) {
                 if ( fun === true ) {
-                    setOnObject( bb, bb.setup.data.events, dom, name, true )
+                    setOnOffObject( bb, setOnInner, bb.setup.data.events, dom, name, true )
                 } else if ( fun === false ) {
-                    setOnObject( bb, bb.setup.data.events, dom, name, false )
+                    setOnOffObject( bb, setOnInner, bb.setup.data.events, dom, name, false )
                 } else {
-                    setOn( bb, bb.setup.data.events, dom, name, fun, false )
+                    setOnOff( bb, setOnInner, bb.setup.data.events, dom, name, fun, false )
                 }
             } else if ( argsLen === 2 ) {
-                setOnObject( bb, bb.setup.data.events, dom, name, false )
+                setOnOffObject( bb, setOnInner, bb.setup.data.events, dom, name, false )
             } else {
                 fail( "unknown parameters given", arguments )
             }
@@ -9454,17 +9694,17 @@ These events include:
             var argsLen = arguments.length;
 
             if ( argsLen === 4 ) {
-                setOn( bb, bb.setup.data.events, dom, name, fun, !! useCapture )
+                setOnOff( bb, setOffInner, bb.setup.data.events, dom, name, fun, !! useCapture )
             } else if ( argsLen === 3 ) {
                 if ( fun === true ) {
-                    setOnObject( bb, bb.setup.data.events, dom, name, true )
+                    setOnOffObject( bb, setOffInner, bb.setup.data.events, dom, name, true )
                 } else if ( fun === false ) {
-                    setOnObject( bb, bb.setup.data.events, dom, name, false )
+                    setOnOffObject( bb, setOffInner, bb.setup.data.events, dom, name, false )
                 } else {
-                    setOn( bb, bb.setup.data.events, dom, name, fun, false )
+                    setOnOff( bb, setOffInner, bb.setup.data.events, dom, name, fun, false )
                 }
             } else if ( argsLen === 2 ) {
-                setOnObject( bb, bb.setup.data.events, dom, name, false )
+                setOnOffObject( bb, setOffInner, bb.setup.data.events, dom, name, false )
             } else {
                 fail( "unknown parameters given", arguments )
             }
@@ -9563,11 +9803,11 @@ This does 2 things:
 
         bb.once = function( dom, name, fun, useCapture ) {
             var funWrap = function() {
-                bb.unregister( dom, name, funWrap, useCapture );
+                bb.removeOn( dom, name, funWrap, useCapture );
                 return fun.apply( this, arguments );
             }
 
-            return bb.on( don, name, funWrap, useCapture );
+            return bb.on( dom, name, funWrap, useCapture );
         }
 
 
@@ -9910,6 +10150,7 @@ This is useful for using conditions to set a class on or off.
                 // 
                 // or last two being 2 functions:
                 //      bb.toggleClass( dom, klasses .... onAddFun, onRemoveFun)
+                // 
 
                 var onAdd    = null;
                 var onRemove = null;
@@ -9937,37 +10178,64 @@ This is useful for using conditions to set a class on or off.
                     onAdd = null;
                 }
 
-                // bb.toggleClass isShow, "show"
+                // bb.toggleClass div, isShowBool, "show" ... potentially more classes ... 
                 if ( isBoolean(arguments[1]) ) {
                     assert( argsLen > 2, "not enough arguments provided" );
 
-                    if ( arguments[1] ) {
-                        if ( argsLen === 3 ) {
-                            return addClassOne( dom, arguments[2] );
-                        } else {
-                            return addClassArray( dom, arguments, 2 );
-                        }
-
-                        if ( onAdd !== null ) {
-                            onAdd( true );
-                        }
+                    if ( 
+                            ( argsLen === 3 && onAdd === null                   ) ||
+                            ( argsLen === 4 && onAdd !== null && onRemove === null ) ||
+                            ( argsLen === 5 && onAdd !== null && onRemove !== null )
+                    ) {
+                        return toggleClassBoolean( dom,
+                                arguments[1], // the boolean flag
+                                arguments[2], // the class,
+                                onAdd,
+                                onRemove
+                        );
 
                     } else {
-                        if ( argsLen === 3 ) {
-                            return removeClassOne( dom, arguments[2] );
-                        } else {
-                            return removeClassArray( dom, arguments, 2 );
-                        }
+                        return toggleClassBooleanArray( dom,
+                                // the boolean flag
+                                arguments[1],
 
-                        if ( onRemove !== null ) {
-                            onRemove( false );
-                        } else if ( onAdd !== null ) {
-                            onAdd( false );
-                        }
+                                // the classes
+                                arguments, 2, endArgsI,
+
+                                onAdd,
+                                onRemove
+                        );
+
                     }
 
+                // bb.toggleClass div, klass, toggleFlag:boolean, onAdd?, onRemove?
+                } else if ( isBoolean(arguments[2]) ) {
+
+                    // 
+                    // this motherfucker is to check ensures that the parameters went ...
+                    // 
+                    //      div,
+                    //      klass,
+                    //      boolean,
+                    //      maybe onAdd function,
+                    //      maybe onRemove function
+                    assert( 
+                            ( argsLen === 3 && onAdd === null                   ) ||
+                            ( argsLen === 4 && onAdd !== null && onRemove === null ) ||
+                            ( argsLen === 5 && onAdd !== null && onRemove !== null ),
+
+                            "too many parameters provided for toggleClass." 
+                    );
+
+                    return toggleClassBoolean( dom,
+                            arguments[2], // the boolean flag
+                            arguments[1], // the class(es) to toggle
+                            onAdd,
+                            onRemove
+                    );
+
                 } else if (
-                        ( argsLen === 3 && onAdd !== null ) ||
+                        ( argsLen === 3 && onAdd    !== null ) ||
                         ( argsLen === 4 && onRemove !== null )
                 ) {
                     return toggleClassOne( dom, klass, onAdd, onRemove );
