@@ -11,7 +11,7 @@ different projects quickly.
 The aim is that any file in any project can be opened at any time in 1 to 4 key 
 board presses.
 
-![example of c4](http://i.imgur.com/vHsk4u6.png);
+![example of c4](http://i.imgur.com/5B5B6kk.png);
 
 This works on Windows only as it uses the Windows scripting objects for file
 and application access.
