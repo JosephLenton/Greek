@@ -268,7 +268,7 @@
         }
 
         var explorerGroup = bb( '.explorer-group', 'c4-hide',
-                folders.map( newExplorer.curry(_, false) ),
+                folders.map( newExplorer ),
 
                 bb('a.explorer-add-explorer', {
                         text: '+',
@@ -277,13 +277,18 @@
                             var lastExplorer = explorerGroup.querySelector(
                                     '.explorer-container:last-of-type > .explorer-content > .explorer-scroll' );
 
-                            var path = lastExplorer ?
-                                    lastExplorer.__folder :
-                                    defaultFolder;
+                            var path = defaultFolder;
+                            if ( lastExplorer && lastExplorer.__folder ) {
+                                path = lastExplorer.__folder;
+                            }
 
-                            this.parentNode.insertBefore(
-                                    refreshExplorer( newExplorer({ path:path }, true) ),
-                                    this );
+                            var explorer = newExplorer({ path: path });
+                            refreshExplorer( explorer.querySelector('.explorer-scroll') );
+                            explorer.classList.add( 'c4-hide' );
+
+                            this.parentNode.insertBefore( explorer, this );
+
+                            bb.removeClass.future( explorer, 'c4-hide' );
 
                             save();
                         }
@@ -293,8 +298,9 @@
         return explorerGroup;
     }
 
-    var newExplorer = function(folder, animateIn) {
+    var newExplorer = function(folder) {
         assert( folder, "No folder provided" );
+        assert( folder.path, "No path found in folder" );
 
         var scroll = bb( '.explorer-scroll' );
         scroll.__files  = [];
@@ -305,7 +311,6 @@
                 className: {
                     'explorer-container': true,
 
-                    'c4-hide'           : !! animateIn,
                     'c4-selected'       : !! folder.isSelected
                 },
 
@@ -314,10 +319,6 @@
                         newInfoBar( scroll, folder.path )
                 ]
         });
-
-        if ( animateIn ) {
-            bb.removeClass.future( div, 'c4-hide' );
-        }
 
         return div;
     }
