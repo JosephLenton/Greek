@@ -4082,6 +4082,8 @@ So this will try to call it normally and if that fails call without an object.
         }
     }
 
+
+
 /* -------------------------------------------------------------------------------
 
 ### newPartial
@@ -8979,8 +8981,7 @@ created.
                         k !== 'value'           &&
                         k !== 'stopPropagation' &&
                         k !== 'preventDefault'  &&
-                        k !== 'self'            &&
-                        k !== 'this'            &&
+                        k !== 'init'            &&
                         k !== 'addTo',
                         "invalid property given, cannot have extra rules in name"
                 );
@@ -9040,11 +9041,11 @@ created.
             } else if ( k === 'preventDefault' ) {
                 setOnOff( bb, setOnInner, bb.setup.data.events, dom, val, PREVENT_DEFAULT_FUN, false )
 
-            } else if ( k === 'self' || k === 'this' ) {
-                assertFunction( val, "none function given for 'self' attribute" );
+            } else if ( k === 'init' ) {
+                assertFunction( val, "none function given for 'init' attribute" );
 
                 if ( bbGun !== null ) {
-                    val.call( bbGun, dom );
+                    val.call( bbGun, bbGun );
                 } else {
                     val.call( dom, dom );
                 }
@@ -9630,22 +9631,32 @@ These events include:
 ### Examples
 
 ```
-    bb.on( dom, "click"                        , fun, true  )
-    bb.on( dom, "click"                        , fun        )
-    bb.on( dom, ["mouseup", "mousedown"]       , fun, false )
-    bb.on( dom, ["mouseup", "mousedown"]       , fun        )
-    bb.on( dom, { click: fun, mousedown: fun } , true       )
-    bb.on( dom, { click: fun, mousedown: fun }              )
-    bb.on( dom, 'mouseup click'                , mouseChange)
-    bb.on( dom, { 'mouseup click': fun }                    )
+    bb.on( dom, "click"                        , fun, true   )
+    bb.on( dom, "click"                        , fun         )
+    bb.on( dom, ["mouseup", "mousedown"]       , fun, false  )
+    bb.on( dom, ["mouseup", "mousedown"]       , fun         )
+    bb.on( dom, { click: fun, mousedown: fun } , true        )
+    bb.on( dom, { click: fun, mousedown: fun }               )
+    bb.on( dom, 'mouseup, click'                , mouseChange )
+    bb.on( dom, { 'mouseup, click': fun }                     )
 
 ------------------------------------------------------------------------------- */
 
         bb.on = function( dom, name, fun, useCapture ) {
+            assert(
+                    dom === window ||
+                    (dom instanceof HTMLElement) ||
+                    (dom instanceof HTMLDocument) ||
+                    dom.__isBBGun,
+                
+                    "HTML Element expected in bb.on."
+            );
+
             var argsLen = arguments.length;
 
             if ( argsLen === 4 ) {
                 setOnOff( bb, setOnInner, bb.setup.data.events, dom, name, fun, !! useCapture )
+
             } else if ( argsLen === 3 ) {
                 if ( fun === true ) {
                     setOnOffObject( bb, setOnInner, bb.setup.data.events, dom, name, true )
@@ -9654,8 +9665,10 @@ These events include:
                 } else {
                     setOnOff( bb, setOnInner, bb.setup.data.events, dom, name, fun, false )
                 }
+
             } else if ( argsLen === 2 ) {
                 setOnOffObject( bb, setOnInner, bb.setup.data.events, dom, name, false )
+
             } else {
                 fail( "unknown parameters given", arguments )
             }
