@@ -145,6 +145,26 @@
         overlay.showConfirm( title, text, callback );
     }
 
+    var isFileNameValid = function( name ) {
+        return name && 
+
+                // disallow certain names
+                name !== '' &&
+                name !== ' ' &&
+                name !== '.' &&
+                name !== '..' &&
+
+                // name does not contain certain characters
+                name.indexOf('\\') === -1 &&
+                name.indexOf('/') === -1 &&
+                name.indexOf(':') === -1 &&
+                name.indexOf('?') === -1 &&
+                name.indexOf('!') === -1 &&
+                name.indexOf('*') === -1 &&
+                name.indexOf('<') === -1 &&
+                name.indexOf('>') === -1 ;
+    }
+
     /**
      * Returns the file extension for the name given.
      *
@@ -491,6 +511,10 @@
         info.querySelector('.explorer-info-title').textContent = getParts( folder, "\\", -3, 2 );
     }
 
+    var refreshExplorerGroup = function( project ) {
+        project.querySelectorAll( '.explorer-container.c4-selected > .explorer-content > .explorer-scroll' ).map( refreshExplorer );
+    }
+
     /**
      * The content redisplays it's content.
      *
@@ -756,6 +780,60 @@
                         },
 
                         {
+                            // forcefully refreshes the current project
+                            '\\': nonInputFunction(function(ev, current) {
+                                refreshExplorerGroup( current.__explorerGroup );
+                            }),
+
+                            // create a new file
+                            'b': nonInputFunction(function(ev, current) {
+                                var folder = current.__explorerGroup.querySelector(
+                                        '.explorer-container.c4-selected > .explorer-content > .explorer-scroll' );
+
+                                if ( folder ) {
+                                    showPrompt( "What call new file?", '', function(name) {
+                                        if ( isFileNameValid(name) ) {
+                                            var path = folder.__folder + '/' + name;
+
+                                            if ( ! FILE_SYSTEM.FileExists(path) ) {
+                                                var file = FILE_SYSTEM.CreateTextFile(path, false, true);
+                                                file.Close();
+                                                refreshExplorer( folder );
+                                            }
+                                        }
+                                    } )
+                                }
+                            }),
+                            
+                            // create a new folder
+                            'v': nonInputFunction(function(ev, current) {
+                                var folder = current.__explorerGroup.querySelector(
+                                        '.explorer-container.c4-selected > .explorer-content > .explorer-scroll' );
+
+                                if ( folder ) {
+                                    showPrompt( "What call new folder?", '', function(name) {
+                                        if ( isFileNameValid(name) ) {
+                                            var path = folder.__folder + '/' + name;
+
+                                            if ( ! FILE_SYSTEM.FileExists(path) ) {
+                                                FILE_SYSTEM.CreateFolder( path );
+                                                refreshExplorer( folder );
+                                            }
+                                        }
+                                    } )
+                                }
+                            }),
+
+                            // open explorer for current folder
+                            'c': nonInputFunction(function(ev, current) {
+                                var folder = current.__explorerGroup.querySelector(
+                                        '.explorer-container.c4-selected > .explorer-content > .explorer-scroll' );
+
+                                if ( folder ) {
+                                    runFile( DEFAULT_APPLICATION, folder.__folder );
+                                }
+                            }),
+
                             // open command line for currently selected folder
                             'n': nonInputFunction(function(ev, current) {
                                 var folder = current.__explorerGroup.querySelector(
