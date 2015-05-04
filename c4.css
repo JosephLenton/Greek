@@ -370,14 +370,14 @@ body {
 
             border-bottom: 1px solid #ddd;
         }
+    .explorer-container.c4-folder-not-found > .explorer-content {
+        background: #291318;
+    }
         .explorer-content {
             position: relative;
 
             width: 100%;
             height: 100%;
-        }
-        .explorer-content.c4-folder-not-found {
-            background: #291318;
         }
             .explorer-info {
                 position: absolute;

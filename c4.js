@@ -274,21 +274,20 @@
                         text: '+',
 
                         click: function() {
-                            var lastExplorer = explorerGroup.querySelector(
-                                    '.explorer-container:last-of-type > .explorer-content > .explorer-scroll' );
-
                             var path = defaultFolder;
+
+                            var lastExplorer = explorerGroup.querySelector( '.explorer-container:last-of-type' );
                             if ( lastExplorer && lastExplorer.__folder ) {
                                 path = lastExplorer.__folder;
                             }
 
-                            var explorer = newExplorer({ path: path });
-                            refreshExplorer( explorer.querySelector('.explorer-scroll') );
-                            explorer.classList.add( 'c4-hide' );
+                            var explorerContainer = newExplorer({ path: path });
+                            refreshExplorer( explorerContainer );
+                            explorerContainer.classList.add( 'c4-hide' );
 
-                            this.parentNode.insertBefore( explorer, this );
+                            this.parentNode.insertBefore( explorerContainer, this );
 
-                            bb.removeClass.future( explorer, 'c4-hide' );
+                            bb.removeClass.future( explorerContainer, 'c4-hide' );
 
                             save();
                         }
@@ -302,25 +301,27 @@
         assert( folder, "No folder provided" );
         assert( folder.path, "No path found in folder" );
 
-        var scroll = bb( '.explorer-scroll' );
-        scroll.__files  = [];
-        scroll.__parent = getFolderParent( folder.path );
-        scroll.__folder = folder.path;
-
-        var div = bb({
+        return bb({
                 className: {
                     'explorer-container': true,
 
                     'c4-selected'       : !! folder.isSelected
                 },
 
-                '.explorer-content': [
-                        scroll,
-                        newInfoBar( scroll, folder.path )
-                ]
-        });
+                '.explorer-content': {
+                    html: bb('.explorer-scroll')
+                },
 
-        return div;
+                init: function() {
+                    this.querySelector( '.explorer-content' ).appendChild(
+                            newInfoBar( this, folder.path )
+                    );
+
+                    this.__files  = [];
+                    this.__parent = getFolderParent( folder.path );
+                    this.__folder = folder.path;
+                }
+        });
     }
 
     var setTitle = function(text) {
@@ -329,22 +330,6 @@
             document.title = text;
         } else {
             document.title = ':: ' + TITLE_PREFIX + ' ::';
-        }
-    }
-
-    var getContentParent = function(content) {
-        if ( content.className.indexOf('explorer-scroll') !== -1 ) {
-            return content.__parent;
-        } else {
-            return content.querySelector( '.explorer-scroll' ).__parent;
-        }
-    }
-
-    var getContentFilesAndFolders = function(content) {
-        if ( content.className.indexOf('explorer-scroll') !== -1 ) {
-            return content.__files;
-        } else {
-            return content.querySelector( '.explorer-scroll' ).__files;
         }
     }
 
@@ -386,45 +371,26 @@
         SHELL.ShellExecute( app, args, workingDir, "open", 1 );
     }
 
-    var getParent = function( child, className ) {
-        var pNode = child.parentNode;
-
-        while ( pNode !== null ) {
-            if ( bb.hasClass(pNode, className) ) {
-                return pNode;
-            } else {
-                pNode = pNode.parentNode;
-            }
-        }
-
-        return null;
-    }
-
-    var newInfoBar = function( content, folder ) {
-        var info = bb('div.explorer-info', {
-                'h2.explorer-info-title': { },
+    var newInfoBar = function( container, folder ) {
+        return bb('div.explorer-info', {
+                'h2.explorer-info-title': {
+                    text: folderToInfoBarTitle( folder )
+                },
                 
                 // close this folder
                 'a.explorer-info-delete': {
                     text: 'x',
                     click: function(ev) {
-                        var pNode = getParent( this, 'explorer-container' );
+                        container.classList.add( 'c4-hide' );
 
-                        if ( pNode !== null ) {
-                            pNode.className += ' c4-hide';
-
-                            var callback = function() {
-                                if ( pNode.parentNode ) {
-                                    pNode.parentNode.removeChild( pNode );
-                                    save();
-                                }
+                        bb.once( container, 'transitionend', function() {
+                            if ( container.parentNode ) {
+                                container.parentNode.removeChild( container );
                             }
-
-                            pNode.addEventListener( 'transitionend', callback );
-                            setTimeout( callback, 200 ); // fallback, should end *after* the transition
-                        }
+                        } );
 
                         ev.stopPropagation();
+                        save();
                     }
                 },
 
@@ -434,11 +400,7 @@
                     'a.explorer-info-control open-explorer': {
                             text: 'explorer',
                             click: function() {
-                                runFile( DEFAULT_APPLICATION, 
-                                    getParent(info, 'explorer-content').
-                                            querySelector( '.explorer-scroll' ).
-                                            __folder
-                                )
+                                runFile( DEFAULT_APPLICATION, container.__folder );
                             }
                     },
 
@@ -452,7 +414,7 @@
                                         if ( file ) {
                                             file.close();
 
-                                            refreshExplorer( content );
+                                            refreshExplorer( container );
                                         }
                                     } catch (ex) {
                                         // do nothing; file already exists, or no access
@@ -467,7 +429,7 @@
                                 if ( name ) {
                                     try {
                                         FILE_SYSTEM.CreateFolder( name );
-                                        refreshExplorer( content );
+                                        refreshExplorer( container );
                                     } catch (ex) {
                                         // do nothing; folder already exists, or no access
                                     }
@@ -479,13 +441,9 @@
                     'a.explorer-info-control open-powershell': {
                             text: 'cmd',
                             click: function() {
-                                var path = getParent( info, 'explorer-content' ).
-                                            querySelector( '.explorer-scroll' ).
-                                            __folder;
-
                                 run( DEFAULT_TERMINAL_APPLICATION,
                                         "-NoExit",
-                                        path );
+                                        container.__folder );
                             }
                     },
                     
@@ -493,27 +451,19 @@
                     'a.explorer-info-control open-upfolder': {
                         text: '..',
                         click: function() {
-                            var content = getParent(info, 'explorer-content').
-                                    querySelector( '.explorer-scroll' );
-                            moveExplorer( content, content.__parent, false );
+                            moveExplorer( container, container.__parent, false );
                         }
                     }
                 }
         });
-
-        content.appendChild( info );
-
-        updateInfoBar( info, folder );
-
-        return info;
     }
 
-    var updateInfoBar = function( info, folder ) {
-        info.querySelector('.explorer-info-title').textContent = getParts( folder, "\\", -3, 2 );
+    var folderToInfoBarTitle = function( folder ) {
+        return getParts( folder, "\\", -3, 2 );
     }
 
     var refreshExplorerGroup = function( project ) {
-        project.querySelectorAll( '.explorer-container.c4-selected > .explorer-content > .explorer-scroll' ).map( refreshExplorer );
+        project.querySelectorAll( '.explorer-container.c4-selected' ).map( refreshExplorer );
     }
 
     /**
@@ -521,33 +471,25 @@
      *
      * This will not cause a save, as the content is not saved to disk.
      */
-    var refreshExplorer = function( content ) {
-        moveExplorer( content, content.__folder, true );
+    var refreshExplorer = function( container ) {
+        moveExplorer( container, container.__folder, true );
     }
 
-    var moveExplorer = function( content, folderPath, noSave ) {
+    var moveExplorer = function( container, folderPath, noSave ) {
         assertString( folderPath, "Expected 'folderPath' to be a string." );
-        noSave = !! noSave;
 
         setTimeout(function() {
-            var scroll, infoBar;
-            if ( content.classList.contains('explorer-scroll') ) {
-                scroll = content;
-                content = getParent(scroll, 'explorer-content');
-            } else {
-                scroll = content.querySelector('.explorer-scroll');
-            }
-
-            infoBar = content.querySelector('.explorer-info');
+            var scroll  = container.querySelector( '.explorer-content > .explorer-scroll' );
+            var infoBar = container.querySelector( '.explorer-content > .explorer-info'   );
 
             var folder = folderPath.replace( /\//g, "\\" );
             if ( folder.charAt(folder.length-1) !== "\\" ) {
                 folder += "\\";
             }
 
-            var folderExists = FILE_SYSTEM.FolderExists(folder);
+            var folderExists = FILE_SYSTEM.FolderExists( folder );
 
-            bb.toggleClass( content, 'c4-folder-not-found', ! folderExists );
+            bb.toggleClass( container, 'c4-folder-not-found', ! folderExists );
 
             var files   = [];
             var folders = [];
@@ -608,7 +550,7 @@
                             },
 
                             'a.explorer-item-link-alt': {
-                                click: moveExplorer.curry( scroll, path, false )
+                                click: moveExplorer.curry( container, path, false )
                             }
                         }) );
 
@@ -624,11 +566,12 @@
                 }
             }
 
-            scroll.__files  = files;
-            scroll.__parent = getFolderParent( folder );
-            scroll.__folder = folder;
+            container.__files  = files;
+            container.__parent = getFolderParent( folder );
+            container.__folder = folder;
 
-            updateInfoBar( infoBar, folder );
+            infoBar.querySelector('.explorer-info-title').textContent =
+                    folderToInfoBarTitle( folder );
 
             if ( ! noSave ) {
                 save();
@@ -645,7 +588,7 @@
 
         div.classList.remove( 'c4-hide' );
 
-        div.querySelectorAll( '.explorer-scroll' ).map( refreshExplorer );
+        div.querySelectorAll( '.explorer-container' ).map( refreshExplorer );
 
         if ( ! skipSave ) {
             save();
@@ -715,11 +658,10 @@
 
             fileSelectKeys[keyOps] = (function(i) {
                 return nonInputFunction(function(ev, current) {
-                    var folder = current.__explorerGroup.querySelector(
-                                        '.explorer-container.c4-selected > .explorer-content > .explorer-scroll' );
+                    var explorerDiv = current.__explorerGroup.querySelector( '.explorer-container.c4-selected' );
 
-                    if ( folder ) {
-                        var file = folder.__files[i];
+                    if ( explorerDiv ) {
+                        var file = explorerDiv.__files[i];
 
                         if ( file ) {
                             if ( file.isFile ) {
@@ -729,7 +671,8 @@
                             }
 
                             // ping the div
-                            var div = folder.querySelector( '.explorer-item:nth-child(' + (i+1) + ')' );
+                            var div = explorerDiv.querySelector(
+                                    '.explorer-content > .explorer-scroll > .explorer-item:nth-child(' + (i+1) + ')' );
                             if ( div ) {
                                 div.classList.add( 'c4-ping' );
                                 bb.once( div, 'transitionend', function() {
@@ -788,18 +731,18 @@
 
                             // create a new file
                             'b': nonInputFunction(function(ev, current) {
-                                var folder = current.__explorerGroup.querySelector(
-                                        '.explorer-container.c4-selected > .explorer-content > .explorer-scroll' );
+                                var container = current.__explorerGroup.querySelector(
+                                        '.explorer-container.c4-selected' );
 
-                                if ( folder ) {
+                                if ( container ) {
                                     showPrompt( "What call new file?", '', function(name) {
                                         if ( isFileNameValid(name) ) {
-                                            var path = folder.__folder + '/' + name;
+                                            var path = container.__folder + '/' + name;
 
                                             if ( ! FILE_SYSTEM.FileExists(path) ) {
                                                 var file = FILE_SYSTEM.CreateTextFile(path, false, true);
                                                 file.Close();
-                                                refreshExplorer( folder );
+                                                refreshExplorer( container );
                                             }
                                         }
                                     } )
@@ -808,17 +751,17 @@
                             
                             // create a new folder
                             'v': nonInputFunction(function(ev, current) {
-                                var folder = current.__explorerGroup.querySelector(
-                                        '.explorer-container.c4-selected > .explorer-content > .explorer-scroll' );
+                                var container = current.__explorerGroup.querySelector(
+                                        '.explorer-container.c4-selected' );
 
-                                if ( folder ) {
+                                if ( container ) {
                                     showPrompt( "What call new folder?", '', function(name) {
                                         if ( isFileNameValid(name) ) {
-                                            var path = folder.__folder + '/' + name;
+                                            var path = container.__folder + '/' + name;
 
                                             if ( ! FILE_SYSTEM.FileExists(path) ) {
                                                 FILE_SYSTEM.CreateFolder( path );
-                                                refreshExplorer( folder );
+                                                refreshExplorer( container );
                                             }
                                         }
                                     } )
@@ -827,35 +770,35 @@
 
                             // open explorer for current folder
                             'c': nonInputFunction(function(ev, current) {
-                                var folder = current.__explorerGroup.querySelector(
-                                        '.explorer-container.c4-selected > .explorer-content > .explorer-scroll' );
+                                var container = current.__explorerGroup.querySelector(
+                                        '.explorer-container.c4-selected' );
 
-                                if ( folder ) {
-                                    runFile( DEFAULT_APPLICATION, folder.__folder );
+                                if ( container ) {
+                                    runFile( DEFAULT_APPLICATION, container.__folder );
                                 }
                             }),
 
                             // open command line for currently selected folder
                             'n': nonInputFunction(function(ev, current) {
-                                var folder = current.__explorerGroup.querySelector(
-                                        '.explorer-container.c4-selected > .explorer-content > .explorer-scroll' );
+                                var container = current.__explorerGroup.querySelector(
+                                        '.explorer-container.c4-selected' );
 
-                                if ( folder ) {
+                                if ( container ) {
                                     run( DEFAULT_TERMINAL_APPLICATION,
                                             "-NoExit",
-                                            folder.__folder );
+                                            container.__folder );
                                 }
                             }),
 
                             // open command line in first folder
                             'm': nonInputFunction(function(ev, current) {
-                                var folder = current.__explorerGroup.querySelector(
-                                        '.explorer-container:first-of-type > .explorer-content > .explorer-scroll' );
+                                var container = current.__explorerGroup.querySelector(
+                                        '.explorer-container:first-of-type' );
 
-                                if ( folder ) {
+                                if ( container ) {
                                     run( DEFAULT_TERMINAL_APPLICATION,
                                             "-NoExit",
-                                            folder.__folder );
+                                            container.__folder );
                                 }
                             })
                         }
@@ -1017,7 +960,7 @@
 
     var newProjectStub = function( environment, explorerGroup, strName ) {
         return bb( '.explorer-project', {
-                'this': function() {
+                init: function() {
                     this.__explorerGroup = explorerGroup;
                 },
 
@@ -1110,16 +1053,19 @@
 
                 var folders = [];
 
-                var contents = explorerGroup.querySelectorAll( '.explorer-scroll' );
+                var contents = explorerGroup.querySelectorAll( '.explorer-container' );
 
                 for ( var j = 0; j < contents.length; j++ ) {
                     var folderDiv = contents[j];
-                    var folder = folderDiv.__folder;
 
-                    folders.push({
-                            path        : folder,
-                            isSelected  : folderDiv.classList.contains('c4-selected')
-                    });
+                    if ( ! folderDiv.className.contains('c4-hide') ) {
+                        var folder = folderDiv.__folder;
+
+                        folders.push({
+                                path        : folder,
+                                isSelected  : folderDiv.classList.contains('c4-selected')
+                        });
+                    }
                 }
 
                 saveGroups.push({
