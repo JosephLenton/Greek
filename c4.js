@@ -6,7 +6,6 @@
 
     var FILE_SYSTEM = new ActiveXObject("Scripting.FileSystemObject");
     var WSHELL = new ActiveXObject("WScript.Shell");
-    var SHELL = new ActiveXObject("Shell.Application");
     var USER_HOME = WSHELL.ExpandEnvironmentStrings('%USERPROFILE%');
 
     var saveFile = USER_HOME + "\\" + '.c4.save.json';
@@ -21,7 +20,7 @@
      * When you click 'cmd', this is the application that will be used,
      * for the command line window.
      */
-    var DEFAULT_TERMINAL_APPLICATION = 'powershell';
+    var DEFAULT_TERMINAL_APPLICATION = 'powershell -NoExit';
 
     /**
      * Values used for building the title, for when it updates.
@@ -387,30 +386,46 @@
 
     var openFile = function( filePath, useAlt ) {
         var ext = getExtension( filePath );
+        var workingDir = getFolderFromPath( filePath );
+        filePath = commandLineSafeString( filePath );
+        var app = '';
 
         if ( ext ) {
-            if ( useAlt && openWithsAlt[ext] ) {
-                runFile( openWithsAlt[ext], filePath );
-            } else if ( openWiths.hasOwnProperty(ext) ) {
-                runFile( openWiths[ext], filePath );
-            } else {
-                runFile( DEFAULT_APPLICATION, filePath );
+            if ( useAlt && openWithsAlt.has(ext) ) {
+                app = openWithsAlt[ ext ];
+
+            } else if ( openWiths.has(ext) ) {
+                app = openWiths[ ext ];
             }
-        } else {
-            runFile( DEFAULT_APPLICATION, filePath );
         }
+
+        if ( app !== '' ) {
+            app += ' ';
+        }
+
+        run( app + filePath, workingDir );
     }
 
     var runFile = function( app, filePath ) {
         run( app, commandLineSafeString(filePath), getFolderFromPath(filePath) ) ;
     }
 
-    var run = function( app, args, workingDir ) {
+    var runFolder = function( folder ) {
+        run( DEFAULT_APPLICATION + ' ' + commandLineSafeString(folder), folder );
+    }
+
+    var run = function( app, workingDir ) {
         if ( ! workingDir ) {
-            workingDir = "";
+            WSHELL.CurrentDirectory = workingDir;
+        } else {
+            WSHELL.CurrentDirectory = defaultFolder;
         }
 
-        SHELL.ShellExecute( app, args, workingDir, "open", 1 );
+        try {
+            WSHELL.Run( app );
+        } catch ( err ) {
+            WSHELL.Run( DEFAULT_APPLICATION + ' ' + app );
+        }
     }
 
     var newInfoBar = function( container, folder ) {
@@ -442,7 +457,7 @@
                     'a.explorer-info-control open-explorer': {
                             text: 'explorer',
                             click: function() {
-                                runFile( DEFAULT_APPLICATION, container.__folder );
+                                runFolder( container.__folder );
                             }
                     },
 
@@ -483,9 +498,7 @@
                     'a.explorer-info-control open-powershell': {
                             text: 'cmd',
                             click: function() {
-                                run( DEFAULT_TERMINAL_APPLICATION,
-                                        "-NoExit",
-                                        container.__folder );
+                                run( DEFAULT_TERMINAL_APPLICATION, container.__folder );
                             }
                     },
                     
@@ -561,7 +574,7 @@
 
                         if ( openWithsAlt.hasOwnProperty(getExtension(path)) ) {
                             fileLinkWrap.appendChild( bb( 'a.explorer-item-link-alt', {
-                                click: runFile.curry( openWithsAlt[getExtension(path)], path )
+                                click: openFile.curry( path, true )
                             }));
                         }
 
@@ -588,7 +601,7 @@
                         scroll.appendChild( bb( 'div.explorer-item.explorer-folder', isFirst, {
                             'a.explorer-item-link': {
                                 text: name,
-                                click: runFile.curry( DEFAULT_APPLICATION, path )
+                                click: runFolder.curry( path )
                             },
 
                             'a.explorer-item-link-alt': {
@@ -709,7 +722,7 @@
                             if ( file.isFile ) {
                                 openFile( file.path, !! ev.shiftKey );
                             } else if ( file.isFolder ) {
-                                runFile( DEFAULT_APPLICATION, file.path )
+                                runFolder( file.path )
                             }
 
                             // ping the div
@@ -816,7 +829,7 @@
                                         '.explorer-container.c4-selected' );
 
                                 if ( container ) {
-                                    runFile( DEFAULT_APPLICATION, container.__folder );
+                                    runFolder( container.__folder );
                                 }
                             }),
 
@@ -826,9 +839,7 @@
                                         '.explorer-container.c4-selected' );
 
                                 if ( container ) {
-                                    run( DEFAULT_TERMINAL_APPLICATION,
-                                            "-NoExit",
-                                            container.__folder );
+                                    run( DEFAULT_TERMINAL_APPLICATION, container.__folder );
                                 }
                             }),
 
@@ -838,9 +849,7 @@
                                         '.explorer-container:first-of-type' );
 
                                 if ( container ) {
-                                    run( DEFAULT_TERMINAL_APPLICATION,
-                                            "-NoExit",
-                                            container.__folder );
+                                    run( DEFAULT_TERMINAL_APPLICATION, container.__folder );
                                 }
                             })
                         }
