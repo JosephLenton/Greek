@@ -318,7 +318,7 @@
                     );
 
                     this.__files  = [];
-                    this.__parent = getFolderParent( folder.path );
+                    this.__parent = getParentFolder( folder.path );
                     this.__folder = folder.path;
                 }
         });
@@ -333,34 +333,76 @@
         }
     }
 
-    var getFolderParent = function( folder ) {
-        var parts = folder.split("\\");
-        parts.splice( parts.length-2, 2 );
-        return parts.join( "\\" ) + "\\";
+    /**
+     * Given the path to a file or folder, this will return the parent folder
+     * for it.
+     *
+     * If the parent is as high as you can go however, there are no more 
+     * parents, then the same folder is returned.
+     *
+     * For example
+     *
+     *  // returns "c:\users\joe\projects\"
+     *  getParentFilder( "c:\users\joe\projects\c4" )
+     *
+     *  // returns "c:\"
+     *  getParentFilder( "c:\\" )
+     *
+     *  // returns "\"
+     *  getParentFilder( "\\" )
+     *
+     * @param folder The folder to find the parent of.
+     */
+    /*
+     * It works by deleting everything from the last path seperated to the end
+     * of the string. As it removed the path seperator it is then put back.
+     *
+     * Deleting the chunk at the end is what makes it move up a folder.
+     *
+     * Putting the seperator back is what makes "c:\" to "c:\", and "\" to "\",
+     * both work.
+     */
+    var getParentFolder = function( folder ) {
+        return folder.replace( /(\\)[^\\]+(\\+)?$/, '\\' );
+    }
+
+    /**
+     * This tries to find the folder for the path given.
+     *
+     * So if the path given is a folder then it's just returned.
+     * But if it is given a file then it returns the parent folder for that 
+     * file.
+     */
+    var getFolderFromPath = function( filePath ) {
+        if ( FILE_SYSTEM.FolderExists(filePath) ) {
+            return filePath;
+        } else {
+            return getParentFolder( filePath );
+        }
     }
 
     var commandLineSafeString = function( path ) {
         return path.replace(/ /g, "\\ ");
     }
 
-    var openFile = function( path, useAlt ) {
-        var ext = getExtension( path );
+    var openFile = function( filePath, useAlt ) {
+        var ext = getExtension( filePath );
 
         if ( ext ) {
             if ( useAlt && openWithsAlt[ext] ) {
-                runFile( openWithsAlt[ext], path );
+                runFile( openWithsAlt[ext], filePath );
             } else if ( openWiths.hasOwnProperty(ext) ) {
-                runFile( openWiths[ext], path );
+                runFile( openWiths[ext], filePath );
             } else {
-                runFile( DEFAULT_APPLICATION, path );
+                runFile( DEFAULT_APPLICATION, filePath );
             }
         } else {
-            runFile( DEFAULT_APPLICATION, path );
+            runFile( DEFAULT_APPLICATION, filePath );
         }
     }
 
-    var runFile = function( app, path ) {
-        run( app, commandLineSafeString(path) ) ;
+    var runFile = function( app, filePath ) {
+        run( app, commandLineSafeString(filePath), getFolderFromPath(filePath) ) ;
     }
 
     var run = function( app, args, workingDir ) {
@@ -567,7 +609,7 @@
             }
 
             container.__files  = files;
-            container.__parent = getFolderParent( folder );
+            container.__parent = getParentFolder( folder );
             container.__folder = folder;
 
             infoBar.querySelector('.explorer-info-title').textContent =
