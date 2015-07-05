@@ -416,10 +416,10 @@
 
     var run = function( app, workingDir ) {
         if ( ! workingDir ) {
-            WSHELL.CurrentDirectory = workingDir;
-        } else {
-            WSHELL.CurrentDirectory = defaultFolder;
+            workingDir = defaultFolder;
         }
+
+        WSHELL.CurrentDirectory = workingDir;
 
         try {
             WSHELL.Run( app );
